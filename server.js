@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
+import gameRoutes from './routes/game.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ mongoose.connect(MONGODB_URI)
 
 // Reitit
 app.use('/api/auth', authRoutes);
+app.use('/api/game', gameRoutes);
 
 // Testireitti
 app.get('/', (req, res) => {
