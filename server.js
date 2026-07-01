@@ -29,6 +29,37 @@ app.get('/', (req, res) => {
   res.send('Ikimetsän backend vastaa ja tietokantaa yhdistetään...');
 });
 
+import CharacterClass from './models/CharacterClass.js';
+import Monster from './models/Monster.js';
+
+const seedDatabase = async () => {
+  try {
+    const classCount = await CharacterClass.countDocuments();
+    if (classCount === 0) {
+      await CharacterClass.create([
+        { name: 'Metsästäjä', description: 'Tuntee metsän polut ja varjot.', baseHp: '40', startingWeapon: { name: 'Vanha puukko', maxDurability: '10' }, initiativeBonus: '4' },
+        { name: 'Mekaanikko', description: 'Kaupunkiolento raskailla työkaluilla.', baseHp: '55', startingWeapon: { name: 'Raskas jakoavain', maxDurability: '15' }, initiativeBonus: '0' }
+      ]);
+      console.log('Hahmoluokat alustettu tietokantaan!');
+    }
+
+    const monsterCount = await Monster.countDocuments();
+    if (monsterCount === 0) {
+      await Monster.create([
+        { name: 'Varjohahmo', hp: '25', defense: '10', attackBonus: '2', damageMax: '8', xpReward: '20' }
+      ]);
+      console.log('Hirviöt alustettu tietokantaan!');
+    }
+  } catch (err) {
+    console.error('Tietokannan alustus epäonnistui:', err);
+  }
+};
+
+// Ajetaan alustustarkistus aina kun yhteys aukeaa
+mongoose.connection.once('open', () => {
+  seedDatabase();
+});
+
 app.listen(PORT, () => {
   console.log(`Palvelin käynnissä portissa ${PORT}`);
 });
