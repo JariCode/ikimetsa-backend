@@ -6,7 +6,7 @@ import Log from '../models/Log.js';
 
 const router = express.Router();
 
-// REKISTERÖITYMINEN
+// REKISTERÖITYMINEN + AUTOMAATTINEN KIRJAUTUMINEN
 router.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -15,17 +15,14 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Käyttäjänimi ja salasana vaaditaan' });
     }
 
-    // Tarkistetaan onko käyttäjä jo olemassa
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: 'Käyttäjänimi on jo varattu' });
     }
 
-    // Salataan salasana
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Luodaan uusi käyttäjä
     const newUser = new User({
       username,
       password: hashedPassword
@@ -33,15 +30,29 @@ router.post('/register', async (req, res) => {
 
     await newUser.save();
 
-    // Kirjoitetaan tapahtuma lokiin
+    // Luodaan token heti rekisteröinnin jälkeen
+    const token = jwt.sign(
+      { id: newUser._id, role: newUser.role },
+      process.env.JWT_SECRET || 'ikimetsa_salaisuus_123',
+      { expiresIn: '1d' }
+    );
+
     const newLog = new Log({
       action: 'USER_REGISTER',
-      details: `Uusi käyttäjä ${username} rekisteröityi`,
+      details: `Uusi käyttäjä ${username} rekisteröityi ja kirjautui sisään`,
       performedBy: username
     });
     await newLog.save();
 
-    res.status(201).json({ message: 'Käyttäjätunnus luotu onnistuneesti' });
+    // Palautetaan token ja käyttäjän tiedot suoraan
+    res.status(201).json({
+      token,
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        role: newUser.role
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe rekisteröinnissä', error: error.message });
   }
