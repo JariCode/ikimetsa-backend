@@ -15,6 +15,57 @@ const cookieOptions = {
   maxAge: 24 * 60 * 60 * 1000 // 1 päivä
 };
 
+// --- KÄYTTÄJÄTUNNUKSEN JA SALASANAN VALIDOINTISÄÄNNÖT ---
+
+// Käyttäjätunnus: 3-30 merkkiä, vain kirjaimet, numerot, alaviiva ja väliviiva sallittu
+const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
+
+// Salasanan vähimmäispituus
+const PASSWORD_MIN_LENGTH = 8;
+
+// Merkit joita ei koskaan sallita käyttäjätunnuksessa tai salasanassa (estää mm. XSS- ja komentoinjektioyrityksiä)
+const FORBIDDEN_CHARS_REGEX = /[<>$;`\\|]/;
+
+// Palauttaa virhetekstin jos käyttäjätunnus ei kelpaa, muuten null
+function validateUsername(username) {
+  if (typeof username !== 'string' || username.trim().length === 0) {
+    return 'Käyttäjätunnus vaaditaan';
+  }
+  if (FORBIDDEN_CHARS_REGEX.test(username)) {
+    return 'Käyttäjätunnus sisältää kiellettyjä merkkejä';
+  }
+  if (!USERNAME_REGEX.test(username)) {
+    return 'Käyttäjätunnuksen pitää olla 3-30 merkkiä pitkä ja sisältää vain kirjaimia, numeroita, alaviivan tai väliviivan';
+  }
+  return null;
+}
+
+// Palauttaa virhetekstin jos salasana ei kelpaa, muuten null
+function validatePassword(password) {
+  if (typeof password !== 'string' || password.length === 0) {
+    return 'Salasana vaaditaan';
+  }
+  if (FORBIDDEN_CHARS_REGEX.test(password)) {
+    return 'Salasana sisältää kiellettyjä merkkejä';
+  }
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return 'Salasanan pitää olla vähintään 8 merkkiä pitkä';
+  }
+  return null;
+}
+
+// Lukee ja tarkistaa JWT-tokenin evästeestä, palauttaa käyttäjän id:n tai null jos ei kirjautunut
+function getUserIdFromRequest(req) {
+  const token = req.cookies.token;
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded.id;
+  } catch (error) {
+    return null;
+  }
+}
+
 // REKISTERÖITYMINEN
 router.post('/register', async (req, res) => {
   try {
@@ -22,6 +73,17 @@ router.post('/register', async (req, res) => {
 
     if (!username || !password) {
       return res.status(400).json({ message: 'Käyttäjänimi ja salasana vaaditaan' });
+    }
+
+    // Käyttäjätunnuksen ja salasanan muotovalidointi ennen tietokantaan koskemista
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      return res.status(400).json({ message: usernameError });
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
     }
 
     const existingUser = await User.findOne({ username });
@@ -119,11 +181,18 @@ router.get('/me', async (req, res) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
+    // 🌟 LISÄTTY: Haetaan käyttäjätunnus, jotta profiilinäkymä tietää sen myös sivun päivityksen jälkeen
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: 'Käyttäjää ei löytynyt' });
+    }
+
     const GameSession = (await import('../models/GameSession.js')).default;
     const session = await GameSession.findOne({ userId: decoded.id });
 
     res.json({
       loggedIn: true,
+      username: user.username,
       gameSessionId: session ? session._id : null,
       session: session || null
     });
@@ -136,6 +205,148 @@ router.get('/me', async (req, res) => {
 router.post('/logout', (req, res) => {
   res.clearCookie('token');
   res.json({ message: 'Kirjauduttu ulos ja evästeet pyyhitty' });
+});
+
+// KÄYTTÄJÄTUNNUKSEN VAIHTO (vaatii nykyisen salasanan vahvistukseksi)
+router.patch('/username', async (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    if (!userId) {
+      return res.status(401).json({ message: 'Ei oikeuksia' });
+    }
+
+    const { newUsername, currentPassword } = req.body;
+
+    const usernameError = validateUsername(newUsername);
+    if (usernameError) {
+      return res.status(400).json({ message: usernameError });
+    }
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: 'Nykyinen salasana vaaditaan vahvistukseksi' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Käyttäjää ei löytynyt' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Väärä salasana' });
+    }
+
+    const existingUser = await User.findOne({ username: newUsername });
+    if (existingUser && String(existingUser._id) !== String(user._id)) {
+      return res.status(400).json({ message: 'Käyttäjätunnus on jo varattu' });
+    }
+
+    const oldUsername = user.username;
+    user.username = newUsername;
+    await user.save();
+
+    const newLog = new Log({
+      action: 'USER_USERNAME_CHANGE',
+      details: `Käyttäjä vaihtoi tunnuksen ${oldUsername} -> ${newUsername}`,
+      performedBy: newUsername
+    });
+    await newLog.save();
+
+    res.json({ username: user.username });
+  } catch (error) {
+    res.status(500).json({ message: 'Palvelinvirhe käyttäjätunnuksen vaihdossa', error: error.message });
+  }
+});
+
+// SALASANAN VAIHTO (vaatii nykyisen salasanan)
+router.patch('/password', async (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    if (!userId) {
+      return res.status(401).json({ message: 'Ei oikeuksia' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: 'Nykyinen salasana vaaditaan' });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Käyttäjää ei löytynyt' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Väärä nykyinen salasana' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    const newLog = new Log({
+      action: 'USER_PASSWORD_CHANGE',
+      details: `Käyttäjä ${user.username} vaihtoi salasanansa`,
+      performedBy: user.username
+    });
+    await newLog.save();
+
+    res.json({ message: 'Salasana vaihdettu onnistuneesti' });
+  } catch (error) {
+    res.status(500).json({ message: 'Palvelinvirhe salasanan vaihdossa', error: error.message });
+  }
+});
+
+// OMAN TILIN POISTO (poistaa myös kaikki pelitiedot pysyvästi)
+router.delete('/account', async (req, res) => {
+  try {
+    const userId = getUserIdFromRequest(req);
+    if (!userId) {
+      return res.status(401).json({ message: 'Ei oikeuksia' });
+    }
+
+    const { currentPassword } = req.body;
+
+    if (!currentPassword) {
+      return res.status(400).json({ message: 'Nykyinen salasana vaaditaan tilin poistoon' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'Käyttäjää ei löytynyt' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Väärä salasana' });
+    }
+
+    const deletedUsername = user.username;
+
+    // Poistetaan pelitiedot ennen käyttäjän poistoa
+    const GameSession = (await import('../models/GameSession.js')).default;
+    await GameSession.deleteOne({ userId: user._id });
+    await User.deleteOne({ _id: user._id });
+
+    const newLog = new Log({
+      action: 'USER_ACCOUNT_DELETE',
+      details: `Käyttäjä ${deletedUsername} poisti oman tilinsä ja pelitietonsa`,
+      performedBy: deletedUsername
+    });
+    await newLog.save();
+
+    res.clearCookie('token');
+    res.json({ message: 'Tili ja pelitiedot poistettu' });
+  } catch (error) {
+    res.status(500).json({ message: 'Palvelinvirhe tilin poistossa', error: error.message });
+  }
 });
 
 export default router;
