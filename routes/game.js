@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import GameSession from '../models/GameSession.js';
 import CharacterClass from '../models/CharacterClass.js';
 import Log from '../models/Log.js';
-import Monster from '../models/Monster.js'; // 👾 Käytetään teidän hienoa mallia
+import Monster from '../models/Monster.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
@@ -21,7 +21,6 @@ router.post('/start-game', async (req, res) => {
   try {
     const { characterClassName } = req.body;
     
-    // Luetaan token turvallisesti evästeistä
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
     
@@ -38,17 +37,15 @@ router.post('/start-game', async (req, res) => {
       return res.status(404).json({ message: 'Valittua hahmoluokkaa ei löydy tietokannasta' });
     }
 
-    // 👾 LAAJENNUS: Haetaan kaikki hirviöt ja arvotaan niistä ensimmäinen vastustaja!
-    const kaikkiHirviot = await Monster.find();
-    let dbMonster = kaikkiHirviot[Math.floor(Math.random() * kaikkiHirviot.length)];
+    // 🔒 LUKITTU: Haetaan tietokannasta nimenomaan Varjohahmo ensimmäiseksi vastustajaksi!
+    let dbMonster = await Monster.findOne({ name: 'Varjohahmo' });
     
-    // Varmistus, jos kanta olisi jostain syystä tyhjä
+    // Vararatkaisu vain jos tietokannassa ei jostain syystä ole vielä ladattuna mörköjä
     if (!dbMonster) {
       dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
     }
 
     const startingMonsterHp = parseInt(dbMonster.hp) || 25;
-
     const hpValue = parseInt(charClass.baseHp);
     const maxDurabilityValue = parseInt(charClass.startingWeapon.maxDurability);
 
@@ -63,7 +60,6 @@ router.post('/start-game', async (req, res) => {
         durability: maxDurabilityValue,
         maxDurability: maxDurabilityValue
       }],
-      // Tallennetaan arvotun hirviön tiedot sessioon
       currentMonsterName: dbMonster.name, 
       currentMonsterLevel: parseInt(dbMonster.level),
       currentMonsterHp: startingMonsterHp,
@@ -76,7 +72,7 @@ router.post('/start-game', async (req, res) => {
 
     const newLog = new Log({
       action: 'GAME_START',
-      details: `Pelaaja alusti pelin tietokantahahmolla ${charClass.name}. Vastassa: ${dbMonster.name} (Lvl ${dbMonster.level})`,
+      details: `Pelaaja alusti pelin hahmolla ${charClass.name}. Ensimmäinen vastus lukittu: ${dbMonster.name} (Lvl ${dbMonster.level})`,
       performedBy: userId
     });
     await newLog.save();
