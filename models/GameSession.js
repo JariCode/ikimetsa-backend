@@ -18,6 +18,10 @@ const gameSessionSchema = new mongoose.Schema({
       maxDurability: { type: Number, required: true }
     }
   ],
+  combatLogs: { type: [String], default: [] },
+  currentMonsterHp: { type: Number, default: 25 },
+  combatInitiative: { type: String, default: null },
+  currentTurn: { type: String, default: null },
   repairPoints: { type: Number, default: 0 }
 }, { timestamps: true });
 

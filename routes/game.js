@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import GameSession from '../models/GameSession.js';
 import CharacterClass from '../models/CharacterClass.js';
 import Log from '../models/Log.js';
+import Monster from '../models/Monster.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
@@ -37,6 +38,13 @@ router.post('/start-game', async (req, res) => {
       return res.status(404).json({ message: 'Valittua hahmoluokkaa ei löydy tietokannasta' });
     }
 
+    let dbMonster = await Monster.findOne({ name: 'Varjohahmo' });
+    if (!dbMonster) {
+      dbMonster = { hp: '25' };
+    }
+
+    const startingMonsterHp = parseInt(dbMonster.hp) || 25;
+
     const hpValue = parseInt(charClass.baseHp);
     const maxDurabilityValue = parseInt(charClass.startingWeapon.maxDurability);
 
@@ -51,6 +59,9 @@ router.post('/start-game', async (req, res) => {
         durability: maxDurabilityValue,
         maxDurability: maxDurabilityValue
       }],
+      currentMonsterHp: startingMonsterHp,
+      combatInitiative: null,
+      currentTurn: null,
       repairPoints: 5
     });
 

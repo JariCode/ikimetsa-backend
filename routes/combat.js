@@ -11,7 +11,7 @@ const rollDice = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 
 router.post('/turn', async (req, res) => {
   try {
-    const { action, currentMonsterHp, hasInitiative, currentTurn } = req.body; 
+    const { action } = req.body;
 
     // Luetaan token evästeistä
     const token = req.cookies.token;
@@ -38,18 +38,22 @@ router.post('/turn', async (req, res) => {
 
     const monster = {
       name: dbMonster.name,
-      hp: currentMonsterHp !== undefined ? parseInt(currentMonsterHp) : maxMonsterHp,
+      hp: typeof session.currentMonsterHp === 'number' ? session.currentMonsterHp : maxMonsterHp,
       defense: monsterDefense,
       attackBonus: monsterAttackBonus,
       damageMax: monsterDamageMax,
       xpReward: monsterXpReward
     };
 
-    let combatLog = [];
+    if (monster.hp <= 0 && !session.combatInitiative && !session.currentTurn) {
+      return res.status(400).json({ message: 'Varjohahmo on jo voitettu. Aloita uusi taistelu pelissä jatkaaksesi.' });
+    }
+
+    const combatLogEntries = [];
     let playerDamageDealt = 0;
     let monsterDamageDealt = 0;
-    let nextTurn = currentTurn;
-    let initiativeWinner = hasInitiative;
+    let nextTurn = session.currentTurn || null;
+    let initiativeWinner = session.combatInitiative || null;
 
     if (action === 'hyokkaa') {
       if (!initiativeWinner) {
@@ -59,12 +63,15 @@ router.post('/turn', async (req, res) => {
         if (playerInitiative >= monsterInitiative) {
           initiativeWinner = 'pelaaja';
           nextTurn = 'pelaaja';
-          combatLog.push(`🎲 Aloiteheitto: Olet nopeampi (Sinä: ${playerInitiative} vs Hirviö: ${monsterInitiative}) ja aloitat taistelun!`);
+          combatLogEntries.push(`🎲 Aloiteheitto: Olet nopeampi (Sinä: ${playerInitiative} vs Hirviö: ${monsterInitiative}) ja aloitat taistelun!`);
         } else {
           initiativeWinner = 'hirviö';
           nextTurn = 'hirviö';
-          combatLog.push(`🎲 Aloiteheitto: ${monster.name} on nopeampi (Hirviö: ${monsterInitiative} vs Sinä: ${playerInitiative}) ja syöksyy pimeydestä ensin!`);
+          combatLogEntries.push(`🎲 Aloiteheitto: ${monster.name} on nopeampi (Hirviö: ${monsterInitiative} vs Sinä: ${playerInitiative}) ja syöksyy pimeydestä ensin!`);
         }
+
+        session.combatInitiative = initiativeWinner;
+        session.currentTurn = nextTurn;
       } else {
         let weapon = session.inventory[0];
         const playerDefense = session.characterType === 'Metsästäjä' ? 12 : 10;
@@ -72,25 +79,26 @@ router.post('/turn', async (req, res) => {
 
         if (nextTurn === 'pelaaja') {
           if (weapon && weapon.durability <= 0) {
-            combatLog.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi hyökätä tehokkaasti.`);
+            combatLogEntries.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi hyökätä tehokkaasti.`);
           } else {
             const attackRoll = rollDice(1, 20);
             if (attackRoll >= monster.defense) {
               playerDamageDealt = rollDice(2, 8);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
-              combatLog.push(`⚔️ Heitit d20: [${attackRoll}] - Osut! Teet ${playerDamageDealt} pistettä vahinkoa.`);
+              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Osut! Teet ${playerDamageDealt} pistettä vahinkoa.`);
 
               if (weapon) {
                 weapon.durability = Math.max(0, (parseInt(weapon.durability) || 0) - 1);
                 if (weapon.durability === 0) {
-                  combatLog.push(`RAKS! Aseesi ${weapon.name} hajosi liitoksistaan!`);
+                  combatLogEntries.push(`RAKS! Aseesi ${weapon.name} hajosi liitoksistaan!`);
                 }
               }
             } else {
-              combatLog.push(`⚔️ Heitit d20: [${attackRoll}] - Svingasit ohi kohteesta.`);
+              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Svingasit ohi kohteesta.`);
             }
           }
           nextTurn = 'hirviö';
+          session.currentTurn = nextTurn;
 
         } else if (nextTurn === 'hirviö') {
           const monsterAttackRoll = rollDice(1, 20) + monster.attackBonus;
@@ -98,11 +106,12 @@ router.post('/turn', async (req, res) => {
           if (monsterAttackRoll >= playerDefense) {
             monsterDamageDealt = rollDice(1, monster.damageMax);
             currentPlayerHp = Math.max(0, currentPlayerHp - monsterDamageDealt);
-            combatLog.push(`💥 ${monster.name} iskee! (Heitti ${monsterAttackRoll}) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
+            combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti ${monsterAttackRoll}) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
           } else {
-            combatLog.push(`🛡️ ${monster.name} yrittää iskeä (Heitti ${monsterAttackRoll}) ja raapaisi ohi vaatteidesi.`);
+            combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä (Heitti ${monsterAttackRoll}) ja raapaisi ohi vaatteidesi.`);
           }
           nextTurn = 'pelaaja';
+          session.currentTurn = nextTurn;
         }
 
         session.stats.hp = currentPlayerHp;
@@ -110,24 +119,36 @@ router.post('/turn', async (req, res) => {
 
       if (monster.hp <= 0) {
         monster.hp = 0;
-        combatLog.push(`💀 ${monster.name} haihtuu mustaksi savuksi. Voitit taistelun ja sait 2 pistettä!`);
+        combatLogEntries.push(`💀 ${monster.name} haihtuu mustaksi savuksi. Voitit taistelun ja sait 2 pistettä!`);
         
         const currentXp = parseInt(session.stats.xp) || 0;
         session.stats.xp = currentXp + monster.xpReward;
         
         const currentPoints = parseInt(session.repairPoints) || 0;
         session.repairPoints = currentPoints + 2;
+
+        session.currentMonsterHp = 0;
+        session.combatInitiative = null;
+        session.currentTurn = null;
+      } else {
+        session.currentMonsterHp = monster.hp;
       }
     }
+
+    session.combatLogs = [...(session.combatLogs || []), ...combatLogEntries];
 
     session.markModified('inventory');
     session.markModified('stats');
     session.markModified('repairPoints');
+    session.markModified('currentMonsterHp');
+    session.markModified('combatInitiative');
+    session.markModified('currentTurn');
+    session.markModified('combatLogs');
     
     await session.save();
 
     res.json({
-      combatLog,
+      combatLogs: session.combatLogs,
       playerHp: session.stats.hp,
       weaponDurability: session.inventory[0]?.durability || 0,
       monsterHp: monster.hp,
@@ -170,13 +191,15 @@ router.post('/repair-weapon', async (req, res) => {
 
     session.repairPoints = currentPoints - 2;
     weapon.durability = maxDurability;
+    session.combatLogs = [...(session.combatLogs || []), `🔧 Kipunoita ja kolketta! Korjasit aseesi takaisin huippukuntoon.`];
 
     session.markModified('inventory');
     session.markModified('repairPoints');
+    session.markModified('combatLogs');
     
     await session.save();
 
-    return res.json({ session });
+    return res.json({ session, combatLogs: session.combatLogs });
 
   } catch (error) {
     console.error("🔥 Virhe aseen korjauksessa backendissä:", error);
