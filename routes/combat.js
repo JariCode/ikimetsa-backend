@@ -1,16 +1,24 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import GameSession from '../models/GameSession.js';
 import Log from '../models/Log.js';
 import Monster from '../models/Monster.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
 
 const rollDice = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-// TAISTELUVUORO
 router.post('/turn', async (req, res) => {
   try {
-    const { userId, action, currentMonsterHp, hasInitiative, currentTurn } = req.body; 
+    const { action, currentMonsterHp, hasInitiative, currentTurn } = req.body; 
+
+    // Luetaan token evästeistä
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
 
     const session = await GameSession.findOne({ userId });
     if (!session) {
@@ -18,7 +26,6 @@ router.post('/turn', async (req, res) => {
     }
 
     let dbMonster = await Monster.findOne({ name: 'Varjohahmo' });
-    
     if (!dbMonster) {
       dbMonster = { name: 'Varjohahmo', hp: '25', defense: '10', attackBonus: '2', damageMax: '8', xpReward: '20' };
     }
@@ -135,10 +142,14 @@ router.post('/turn', async (req, res) => {
   }
 });
 
-// ASEEN KORJAUS
 router.post('/repair-weapon', async (req, res) => {
   try {
-    const { userId } = req.body;
+    // Luetaan token evästeistä
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
 
     const session = await GameSession.findOne({ userId });
     if (!session) {

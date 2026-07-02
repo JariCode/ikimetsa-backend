@@ -5,8 +5,17 @@ import User from '../models/User.js';
 import Log from '../models/Log.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
 
-// REKISTERÖITYMINEN + AUTOMAATTINEN KIRJAUTUMINEN
+// HTTPOnly-evästeen suojatut asetukset
+const cookieOptions = {
+  httpOnly: true,    // Estää frontin JavaScriptiä koskemasta tokeniin (XSS-suoja)
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict', // CSRF-suojaus
+  maxAge: 24 * 60 * 60 * 1000 // 1 päivä
+};
+
+// REKISTERÖITYMINEN
 router.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -30,12 +39,14 @@ router.post('/register', async (req, res) => {
 
     await newUser.save();
 
-    // Luodaan token heti rekisteröinnin jälkeen
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
-      process.env.JWT_SECRET || 'ikimetsa_salaisuus_123',
+      JWT_SECRET,
       { expiresIn: '1d' }
     );
+
+    // Kirjoitetaan JWT evästeeseen
+    res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
       action: 'USER_REGISTER',
@@ -44,14 +55,10 @@ router.post('/register', async (req, res) => {
     });
     await newLog.save();
 
-    // Palautetaan token ja käyttäjän tiedot suoraan
     res.status(201).json({
-      token,
-      user: {
-        id: newUser._id,
-        username: newUser.username,
-        role: newUser.role
-      }
+      username: newUser.username,
+      gameSessionId: null,
+      session: null
     });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe rekisteröinnissä', error: error.message });
@@ -68,20 +75,20 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Väärä käyttäjänimi tai salasana' });
     }
 
-    // Tarkistetaan salasana
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Väärä käyttäjänimi tai salasana' });
     }
 
-    // Luodaan JWT-token istuntoa varten (salaisuus luetaan .env tiedostosta)
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'ikimetsa_salaisuus_123',
+      JWT_SECRET,
       { expiresIn: '1d' }
     );
 
-    // Kirjoitetaan kirjautuminen lokiin
+    // Kirjoitetaan JWT evästeeseen
+    res.cookie('token', token, cookieOptions);
+
     const newLog = new Log({
       action: 'USER_LOGIN',
       details: `Käyttäjä ${username} kirjautui sisään`,
@@ -89,17 +96,46 @@ router.post('/login', async (req, res) => {
     });
     await newLog.save();
 
+    const GameSession = (await import('../models/GameSession.js')).default;
+    const session = await GameSession.findOne({ userId: user._id });
+
     res.json({
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        role: user.role
-      }
+      username: user.username,
+      gameSessionId: session ? session._id : null, // Tämä ohjataan sessionStorageen
+      session: session || null
     });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe kirjautumisessa', error: error.message });
   }
+});
+
+// ISTUNNON TARKISTUS SIVUN PÄIVITYKSESSÄ (Luetaan evästeistä)
+router.get('/me', async (req, res) => {
+  try {
+    const token = req.cookies.token; // 🍪 Luetaan suoraan OnlyCookies-rakenteesta
+    if (!token) {
+      return res.status(401).json({ message: 'Ei tokenia' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    const GameSession = (await import('../models/GameSession.js')).default;
+    const session = await GameSession.findOne({ userId: decoded.id });
+
+    res.json({
+      loggedIn: true,
+      gameSessionId: session ? session._id : null,
+      session: session || null
+    });
+  } catch (error) {
+    res.status(401).json({ message: 'Istunto vanhentunut' });
+  }
+});
+
+// ULOSKIRJAUTUMINEN (Tyhjennetään eväste kokonaan)
+router.post('/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Kirjauduttu ulos ja evästeet pyyhitty' });
 });
 
 export default router;

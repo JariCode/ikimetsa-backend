@@ -1,11 +1,12 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import GameSession from '../models/GameSession.js';
 import CharacterClass from '../models/CharacterClass.js';
 import Log from '../models/Log.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
 
-// PYYNTÖ: Hae kaikki saatavilla olevat hahmoluokat tietokannasta
 router.get('/classes', async (req, res) => {
   try {
     const classes = await CharacterClass.find();
@@ -15,17 +16,22 @@ router.get('/classes', async (req, res) => {
   }
 });
 
-// POST: Aloita peli käyttäen tietokannasta löytyvää hahmoluokkaa
 router.post('/start-game', async (req, res) => {
   try {
-    const { userId, characterClassName } = req.body;
+    const { characterClassName } = req.body;
+    
+    // Luetaan token turvallisesti evästeistä
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
 
     const existingSession = await GameSession.findOne({ userId });
     if (existingSession) {
       return res.status(400).json({ message: 'Peli on jo aloitettu tällä käyttäjällä' });
     }
 
-    // Etsitään hahmoluokan tiedot suoraan tietokannasta
     const charClass = await CharacterClass.findOne({ name: characterClassName });
     if (!charClass) {
       return res.status(404).json({ message: 'Valittua hahmoluokkaa ei löydy tietokannasta' });

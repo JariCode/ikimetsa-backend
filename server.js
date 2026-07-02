@@ -2,17 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import cookieParser from 'cookie-parser'; // 🍪 LISÄTTY
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
-import combatRoutes from './routes/combat.js'; // ⚔️ LISÄTTY: Tuodaan taistelureitit sisään!
+import combatRoutes from './routes/combat.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000; // Lisätty varmistus portille 5000, jos .env reistailee
+const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Päivitä CORS hyväksymään evästeet (credentials) frontendistä
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Muuta vastaamaan fronttisi porttia
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser()); // 🍪 LISÄTTY: Luetaan evästeet helposti
 
 // Tietokantayhteys
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -24,7 +30,7 @@ mongoose.connect(MONGODB_URI)
 // Reitit
 app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
-app.use('/api/combat', combatRoutes); // ⚔️ LISÄTTY: Kytketään taistelureitit polun taakse!
+app.use('/api/combat', combatRoutes);
 
 // Testireitti
 app.get('/', (req, res) => {
@@ -57,7 +63,6 @@ const seedDatabase = async () => {
   }
 };
 
-// Ajetaan alustustarkistus aina kun yhteys aukeaa
 mongoose.connection.once('open', () => {
   seedDatabase();
 });
