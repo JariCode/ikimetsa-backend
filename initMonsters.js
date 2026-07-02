@@ -23,6 +23,7 @@ export const seedMonsters = async () => {
 
     console.log('👾 Asennetaan uudet Ikimetsän hirviöt tasoineen...');
     await Monster.create([
+      // 1. Alue: Metsän reuna
       { 
         name: 'Varjohahmo', 
         hp: '25', 
@@ -33,6 +34,7 @@ export const seedMonsters = async () => {
         cssClass: 'varjohahmo',
         level: '1' // 👈 Hirviön taso lisätty!
       },
+      // 2. Alue: Suo
       { 
         name: 'Suolieju', 
         hp: '35', 
@@ -43,6 +45,7 @@ export const seedMonsters = async () => {
         cssClass: 'suolieju',
         level: '2' // 👈 Hirviön taso lisätty!
       },
+      // 3. Alue: Koski
       { 
         name: 'Koskenkuristaja', 
         hp: '45', 
@@ -52,10 +55,87 @@ export const seedMonsters = async () => {
         xpReward: '50',
         cssClass: 'koskenkuristaja',
         level: '3' // 👈 Hirviön taso lisätty!
+      },
+      // 4. Alue: Järvi
+      { 
+        name: 'Suomuinen Järvikäärme', 
+        hp: '55', 
+        defense: '14', 
+        attackBonus: '3', 
+        damageMax: '14', 
+        xpReward: '70',
+        cssClass: 'jarvikaarme',
+        level: '4'
+      },
+      // 5. Alue: Luolasto (Vastus 1)
+      { 
+        name: 'Luolapeikko', 
+        hp: '70', 
+        defense: '11', 
+        attackBonus: '4', 
+        damageMax: '18', 
+        xpReward: '100',
+        cssClass: 'luolapeikko',
+        level: '5'
+      },
+      // 5. Alue: Luolasto (Vastus 2)
+      { 
+        name: 'Jättiläishämähäkki', 
+        hp: '65', 
+        defense: '15', 
+        attackBonus: '5', 
+        damageMax: '15', 
+        xpReward: '120',
+        cssClass: 'hamahakki',
+        level: '6'
+      },
+      // 6. Alue: Syvä metsä
+      { 
+        name: 'Metsäjättiläinen', 
+        hp: '90', 
+        defense: '10', 
+        attackBonus: '5', 
+        damageMax: '22', 
+        xpReward: '160',
+        cssClass: 'metsajattilainen',
+        level: '7'
+      },
+      // 7. Alue: Hautausmaa
+      { 
+        name: 'Rypevä Zombie', 
+        hp: '80', 
+        defense: '8', 
+        attackBonus: '4', 
+        damageMax: '16', 
+        xpReward: '180',
+        cssClass: 'zombie',
+        level: '8'
+      },
+      // 8. Alue: Synkkä sydänmetsä
+      { 
+        name: 'Ihmissusi', 
+        hp: '110', 
+        defense: '13', 
+        attackBonus: '7', 
+        damageMax: '20', 
+        xpReward: '220',
+        cssClass: 'ihmissusi',
+        level: '9'
+      },
+      // 9. Alue: Ränsistynyt mökki (PÄÄVASTUS)
+      { 
+        name: 'Kirottujen Velho', 
+        hp: '150', 
+        defense: '16', 
+        attackBonus: '9', 
+        damageMax: '26', 
+        xpReward: '500',
+        cssClass: 'velho',
+        level: '10'
       }
     ]);
 
-    console.log('✅ Kaikki 3 hirviötä asennettu onnistuneesti tietokantaan!');
+    console.log('✅ Kaikki 10 hirviömuotoa asennettu onnistuneesti tietokantaan!');
   } catch (err) {
     console.error('❌ Hirviöiden asennus epäonnistui:', err);
   } finally {
