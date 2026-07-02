@@ -65,7 +65,7 @@ router.post('/start-game', async (req, res) => {
       }],
       // Tallennetaan arvotun hirviön tiedot sessioon
       currentMonsterName: dbMonster.name, 
-      currentMonsterLevel: parseInt(dbMonster.level) || 1, // 👈 LISÄTTY: Luetaan hirviön taso asennustiedostosta sessioon!
+      currentMonsterLevel: parseInt(dbMonster.level),
       currentMonsterHp: startingMonsterHp,
       combatInitiative: null,
       currentTurn: null,

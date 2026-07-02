@@ -56,11 +56,14 @@ router.post('/turn', async (req, res) => {
     let monsterDamageDealt = 0;
     let nextTurn = session.currentTurn || null;
     let initiativeWinner = session.combatInitiative || null;
+    let displayRoll = null; // 🎲 Tämän kierroksen "puhdas" d20-heitto (ilman bonuksia) noppa-animaatiota varten
 
     if (action === 'hyokkaa') {
       if (!initiativeWinner) {
-        const playerInitiative = rollDice(1, 20) + (session.characterType === 'Metsästäjä' ? 4 : 0);
+        const playerRawRoll = rollDice(1, 20);
+        const playerInitiative = playerRawRoll + (session.characterType === 'Metsästäjä' ? 4 : 0);
         const monsterInitiative = rollDice(1, 20);
+        displayRoll = playerRawRoll; // näytetään pelaajan oma raaka d20-heitto nopassa
 
         if (playerInitiative >= monsterInitiative) {
           initiativeWinner = 'pelaaja';
@@ -84,6 +87,7 @@ router.post('/turn', async (req, res) => {
             combatLogEntries.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi hyökätä tehokkaasti.`);
           } else {
             const attackRoll = rollDice(1, 20);
+            displayRoll = attackRoll;
             if (attackRoll >= monster.defense) {
               playerDamageDealt = rollDice(2, 8);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
@@ -103,7 +107,9 @@ router.post('/turn', async (req, res) => {
           session.currentTurn = nextTurn;
 
         } else if (nextTurn === 'hirviö') {
-          const monsterAttackRoll = rollDice(1, 20) + monster.attackBonus;
+          const monsterRawRoll = rollDice(1, 20);
+          const monsterAttackRoll = monsterRawRoll + monster.attackBonus;
+          displayRoll = monsterRawRoll; // näytetään hirviön raaka d20-heitto nopassa
 
           if (monsterAttackRoll >= playerDefense) {
             monsterDamageDealt = rollDice(1, monster.damageMax);
@@ -182,7 +188,8 @@ router.post('/turn', async (req, res) => {
       monsterHp: monster.hp,
       repairPoints: session.repairPoints,
       initiativeWinner,
-      nextTurn
+      nextTurn,
+      diceRoll: displayRoll
     });
 
   } catch (error) {
