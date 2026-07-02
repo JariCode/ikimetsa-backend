@@ -19,6 +19,8 @@ const gameSessionSchema = new mongoose.Schema({
     }
   ],
   combatLogs: { type: [String], default: [] },
+  currentMonsterName: { type: String, default: 'Varjohahmo' }, 
+  currentMonsterLevel: { type: Number, default: 1 },         
   currentMonsterHp: { type: Number, default: 25 },
   combatInitiative: { type: String, default: null },
   currentTurn: { type: String, default: null },

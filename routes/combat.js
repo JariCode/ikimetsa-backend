@@ -25,9 +25,11 @@ router.post('/turn', async (req, res) => {
       return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
     }
 
-    let dbMonster = await Monster.findOne({ name: 'Varjohahmo' });
+    // 👾 KORJATTU: Haetaan se hirviö, joka on parhaillaan merkitty istuntoon!
+    const monsterNameInSession = session.currentMonsterName || 'Varjohahmo';
+    let dbMonster = await Monster.findOne({ name: monsterNameInSession });
     if (!dbMonster) {
-      dbMonster = { name: 'Varjohahmo', hp: '25', defense: '10', attackBonus: '2', damageMax: '8', xpReward: '20' };
+      dbMonster = { name: monsterNameInSession, hp: '25', defense: '10', attackBonus: '2', damageMax: '8', xpReward: '20' };
     }
 
     const maxMonsterHp = parseInt(dbMonster.hp) || 25;
@@ -46,7 +48,7 @@ router.post('/turn', async (req, res) => {
     };
 
     if (monster.hp <= 0 && !session.combatInitiative && !session.currentTurn) {
-      return res.status(400).json({ message: 'Varjohahmo on jo voitettu. Aloita uusi taistelu pelissä jatkaaksesi.' });
+      return res.status(400).json({ message: `${monster.name} on jo voitettu. Aloita uusi taistelu pelissä jatkaaksesi.` });
     }
 
     const combatLogEntries = [];
@@ -63,11 +65,11 @@ router.post('/turn', async (req, res) => {
         if (playerInitiative >= monsterInitiative) {
           initiativeWinner = 'pelaaja';
           nextTurn = 'pelaaja';
-          combatLogEntries.push(`🎲 Aloiteheitto: Olet nopeampi (Sinä: ${playerInitiative} vs Hirviö: ${monsterInitiative}) ja aloitat taistelun!`);
+          combatLogEntries.push(`🎲 Aloiteheitto: Olet nopeampi (Sinä: ${playerInitiative} vs ${monster.name}: ${monsterInitiative}) ja aloitat taistelun!`);
         } else {
           initiativeWinner = 'hirviö';
           nextTurn = 'hirviö';
-          combatLogEntries.push(`🎲 Aloiteheitto: ${monster.name} on nopeampi (Hirviö: ${monsterInitiative} vs Sinä: ${playerInitiative}) ja syöksyy pimeydestä ensin!`);
+          combatLogEntries.push(`🎲 Aloiteheitto: ${monster.name} on nopeampi (${monster.name}: ${monsterInitiative} vs Sinä: ${playerInitiative}) ja syöksyy pimeydestä ensin!`);
         }
 
         session.combatInitiative = initiativeWinner;
@@ -85,7 +87,7 @@ router.post('/turn', async (req, res) => {
             if (attackRoll >= monster.defense) {
               playerDamageDealt = rollDice(2, 8);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
-              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Osut! Teet ${playerDamageDealt} pistettä vahinkoa.`);
+              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
 
               if (weapon) {
                 weapon.durability = Math.max(0, (parseInt(weapon.durability) || 0) - 1);
@@ -94,7 +96,7 @@ router.post('/turn', async (req, res) => {
                 }
               }
             } else {
-              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Svingasit ohi kohteesta.`);
+              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Svingasit ohi kohteesta ${monster.name}.`);
             }
           }
           nextTurn = 'hirviö';
@@ -119,10 +121,32 @@ router.post('/turn', async (req, res) => {
 
       if (monster.hp <= 0) {
         monster.hp = 0;
-        combatLogEntries.push(`💀 ${monster.name} haihtuu mustaksi savuksi. Voitit taistelun ja sait 2 pistettä!`);
+        combatLogEntries.push(`💀 ${monster.name} haihtuu mustaksi savuksi. Voitit taistelun ja sait ${monster.xpReward} XP:tä ja 2 korjauspistettä!`);
         
-        const currentXp = parseInt(session.stats.xp) || 0;
-        session.stats.xp = currentXp + monster.xpReward;
+        let currentXp = parseInt(session.stats.xp) || 0;
+        let currentLevel = parseInt(session.stats.level) || 1;
+        let currentMaxHp = parseInt(session.stats.maxHp) || 40;
+
+        // Lisätään dynaaminen XP
+        currentXp += monster.xpReward;
+        let xpNeeded = currentLevel * 100;
+
+        // 🌟 DYNAAMINEN LEVEL UP PROGRESSIO SILMUKASSA
+        while (currentXp >= xpNeeded) {
+          currentXp -= xpNeeded;
+          currentLevel += 1;
+          
+          const hpBonus = session.characterType === 'Mekaanikko' ? 15 : 10;
+          currentMaxHp += hpBonus;
+          
+          session.stats.hp = currentMaxHp; // Täytetään elämät tasonnousussa
+          combatLogEntries.push(`✨ LEVEL UP! Saavutit tason ${currentLevel}! Maksimielämäsi nousivat arvoon ${currentMaxHp} HP ja kuntosi palautui täyteen!`);
+          xpNeeded = currentLevel * 100;
+        }
+
+        session.stats.xp = currentXp;
+        session.stats.level = currentLevel;
+        session.stats.maxHp = currentMaxHp;
         
         const currentPoints = parseInt(session.repairPoints) || 0;
         session.repairPoints = currentPoints + 2;
@@ -147,9 +171,13 @@ router.post('/turn', async (req, res) => {
     
     await session.save();
 
+    // Palautetaan kaikki dynaamiset progression arvot JSON-vastauksessa frontendille lennosta
     res.json({
       combatLogs: session.combatLogs,
       playerHp: session.stats.hp,
+      playerMaxHp: session.stats.maxHp,
+      playerLevel: session.stats.level,
+      playerXp: session.stats.xp,
       weaponDurability: session.inventory[0]?.durability || 0,
       monsterHp: monster.hp,
       repairPoints: session.repairPoints,
@@ -179,7 +207,7 @@ router.post('/repair-weapon', async (req, res) => {
 
     const currentPoints = parseInt(session.repairPoints) || 0;
     if (currentPoints < 2) {
-      return res.status(400).json({ message: 'Ei tarpeeksi pisteitä (vaatii 2pts)' });
+      return res.status(400).json({ message: 'Ei tarpeeksi korjauspisteitä (vaatii 2pts)' });
     }
 
     let weapon = session.inventory[0];

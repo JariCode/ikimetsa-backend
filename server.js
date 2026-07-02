@@ -2,23 +2,24 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import cookieParser from 'cookie-parser'; // 🍪 LISÄTTY
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import combatRoutes from './routes/combat.js';
+
+import CharacterClass from './models/CharacterClass.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Päivitä CORS hyväksymään evästeet (credentials) frontendistä
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Muuta vastaamaan fronttisi porttia
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
-app.use(cookieParser()); // 🍪 LISÄTTY: Luetaan evästeet helposti
+app.use(cookieParser());
 
 // Tietokantayhteys
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -32,14 +33,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/combat', combatRoutes);
 
-// Testireitti
 app.get('/', (req, res) => {
   res.send('Ikimetsän backend vastaa ja tietokantaa yhdistetään...');
 });
 
-import CharacterClass from './models/CharacterClass.js';
-import Monster from './models/Monster.js';
-
+// Alustetaan hahmoluokat (Teidän alkuperäinen siisti logiikka)
 const seedDatabase = async () => {
   try {
     const classCount = await CharacterClass.countDocuments();
@@ -50,21 +48,15 @@ const seedDatabase = async () => {
       ]);
       console.log('Hahmoluokat alustettu tietokantaan!');
     }
-
-    const monsterCount = await Monster.countDocuments();
-    if (monsterCount === 0) {
-      await Monster.create([
-        { name: 'Varjohahmo', hp: '25', defense: '10', attackBonus: '2', damageMax: '8', xpReward: '20' }
-      ]);
-      console.log('Hirviöt alustettu tietokantaan!');
-    }
   } catch (err) {
-    console.error('Tietokannan alustus epäonnistui:', err);
+    console.error('Tietokannan hahmoluokkien alustus epäonnistui:', err);
   }
 };
 
+// 🚀 AJETAAN VAIN HAHMOLUOKKIEN SIEMENTÄMINEN KUN YHTEYS AUKEAA
+// Hirviöt asennetaan erikseen omalla asennustiedostolla komentoriviltä!
 mongoose.connection.once('open', () => {
-  seedDatabase();
+  seedDatabase(); // Hahmot
 });
 
 app.listen(PORT, () => {

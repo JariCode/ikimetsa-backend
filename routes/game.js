@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import GameSession from '../models/GameSession.js';
 import CharacterClass from '../models/CharacterClass.js';
 import Log from '../models/Log.js';
-import Monster from '../models/Monster.js';
+import Monster from '../models/Monster.js'; // 👾 Käytetään teidän hienoa mallia
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
@@ -38,9 +38,13 @@ router.post('/start-game', async (req, res) => {
       return res.status(404).json({ message: 'Valittua hahmoluokkaa ei löydy tietokannasta' });
     }
 
-    let dbMonster = await Monster.findOne({ name: 'Varjohahmo' });
+    // 👾 LAAJENNUS: Haetaan kaikki hirviöt ja arvotaan niistä ensimmäinen vastustaja!
+    const kaikkiHirviot = await Monster.find();
+    let dbMonster = kaikkiHirviot[Math.floor(Math.random() * kaikkiHirviot.length)];
+    
+    // Varmistus, jos kanta olisi jostain syystä tyhjä
     if (!dbMonster) {
-      dbMonster = { hp: '25' };
+      dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
     }
 
     const startingMonsterHp = parseInt(dbMonster.hp) || 25;
@@ -59,6 +63,9 @@ router.post('/start-game', async (req, res) => {
         durability: maxDurabilityValue,
         maxDurability: maxDurabilityValue
       }],
+      // Tallennetaan arvotun hirviön tiedot sessioon
+      currentMonsterName: dbMonster.name, 
+      currentMonsterLevel: parseInt(dbMonster.level) || 1, // 👈 LISÄTTY: Luetaan hirviön taso asennustiedostosta sessioon!
       currentMonsterHp: startingMonsterHp,
       combatInitiative: null,
       currentTurn: null,
@@ -69,7 +76,7 @@ router.post('/start-game', async (req, res) => {
 
     const newLog = new Log({
       action: 'GAME_START',
-      details: `Pelaaja alusti pelin tietokantahahmolla ${charClass.name}`,
+      details: `Pelaaja alusti pelin tietokantahahmolla ${charClass.name}. Vastassa: ${dbMonster.name} (Lvl ${dbMonster.level})`,
       performedBy: userId
     });
     await newLog.save();
