@@ -87,6 +87,10 @@ router.post('/start-game', async (req, res) => {
 // 🌟 Merkitään pelisessioon että pelaaja on astunut taisteluun (liikkumisnopalla heitetty kuutonen).
 // Tämän avulla "Jatka taivalta" osaa jatkossa palauttaa pelaajan oikeaan paikkaan
 // (liikkumiseen vai suoraan taisteluun) vaikka hän kirjautuisi välissä ulos.
+// Palkitaan samalla pieni XP siitä että pelaaja selvisi liikkumisosuuden läpi asti taisteluun -
+// vain kerran per kohtaaminen (hasEnteredCombat-suoja estää tuplapalkinnon).
+const MOVEMENT_XP_REWARD = 10;
+
 router.post('/enter-combat', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -100,10 +104,49 @@ router.post('/enter-combat', async (req, res) => {
       return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
     }
 
+    const levelUpLogs = [];
+
+    if (!session.hasEnteredCombat) {
+      let currentXp = (parseInt(session.stats.xp) || 0) + MOVEMENT_XP_REWARD;
+      let currentLevel = parseInt(session.stats.level) || 1;
+      let currentMaxHp = parseInt(session.stats.maxHp) || 40;
+      let xpNeeded = currentLevel * 100;
+
+      // 🌟 Sama dynaaminen level up -silmukka kuin taistelussa
+      while (currentXp >= xpNeeded) {
+        currentXp -= xpNeeded;
+        currentLevel += 1;
+
+        const hpBonus = session.characterType === 'Mekaanikko' ? 15 : 10;
+        currentMaxHp += hpBonus;
+
+        session.stats.hp = currentMaxHp;
+        levelUpLogs.push(`✨ LEVEL UP! Saavutit tason ${currentLevel}! Maksimielämäsi nousivat arvoon ${currentMaxHp} HP ja kuntosi palautui täyteen!`);
+        xpNeeded = currentLevel * 100;
+      }
+
+      session.stats.xp = currentXp;
+      session.stats.level = currentLevel;
+      session.stats.maxHp = currentMaxHp;
+
+      if (levelUpLogs.length > 0) {
+        session.combatLogs = [...(session.combatLogs || []), ...levelUpLogs];
+      }
+    }
+
     session.hasEnteredCombat = true;
+    session.markModified('stats');
+    session.markModified('combatLogs');
     await session.save();
 
-    res.json({ hasEnteredCombat: true });
+    res.json({
+      hasEnteredCombat: true,
+      playerHp: session.stats.hp,
+      playerMaxHp: session.stats.maxHp,
+      playerLevel: session.stats.level,
+      playerXp: session.stats.xp,
+      combatLogs: session.combatLogs
+    });
   } catch (error) {
     res.status(500).json({ message: 'Taisteluun siirtymisen tallennus epäonnistui', error: error.message });
   }
