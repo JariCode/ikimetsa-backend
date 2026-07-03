@@ -1,6 +1,7 @@
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
@@ -9,21 +10,33 @@ import combatRoutes from './routes/combat.js';
 
 import CharacterClass from './models/CharacterClass.js';
 
-dotenv.config();
+// 🛡️ Kaikki ympäristömuuttujat vaaditaan eksplisiittisesti .env-tiedostosta -
+// ei kovakoodattuja oletusarvoja jotka voisivat piilottaa puuttuvan asetuksen.
+const PORT = process.env.PORT;
+if (!PORT) {
+  throw new Error('❌ PORT puuttuu .env-tiedostosta.');
+}
+
+const FRONTEND_URL = process.env.FRONTEND_URL;
+if (!FRONTEND_URL) {
+  throw new Error('❌ FRONTEND_URL puuttuu .env-tiedostosta.');
+}
+
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error('❌ MONGODB_URI puuttuu .env-tiedostosta.');
+}
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: FRONTEND_URL,
   credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
 
 // Tietokantayhteys
-const MONGODB_URI = process.env.MONGODB_URI;
-
 mongoose.connect(MONGODB_URI)
   .then(() => console.log('Yhteys MongoDB Atlas -tietokantaan muodostettu onnistuneesti!'))
   .catch((err) => console.error('Tietokantayhteys epäonnistui:', err));

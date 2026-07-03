@@ -3,9 +3,24 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Log from '../models/Log.js';
+import Area from '../models/Area.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('❌ JWT_SECRET puuttuu .env-tiedostosta - palvelinta ei käynnistetä turvattomalla oletusarvolla.');
+}
+const TOTAL_AREAS = 10;
+
+// 🗺️ Sama alue-liitäntähelpperi kuin game.js:ssä - liittää session.currentAreaIndex:tä
+// vastaavan Area-dokumentin mukaan "currentArea"-kenttänä, jos pelisessio on olemassa.
+const attachAreaIfSession = async (session) => {
+  if (!session) return null;
+  const areaOrder = Math.min(session.currentAreaIndex || 1, TOTAL_AREAS);
+  const area = await Area.findOne({ order: areaOrder });
+  const sessionObject = session.toObject ? session.toObject() : session;
+  return { ...sessionObject, currentArea: area || null };
+};
 
 // HTTPOnly-evästeen suojatut asetukset
 const cookieOptions = {
@@ -160,11 +175,12 @@ router.post('/login', async (req, res) => {
 
     const GameSession = (await import('../models/GameSession.js')).default;
     const session = await GameSession.findOne({ userId: user._id });
+    const sessionWithArea = await attachAreaIfSession(session);
 
     res.json({
       username: user.username,
       gameSessionId: session ? session._id : null, // Tämä ohjataan sessionStorageen
-      session: session || null
+      session: sessionWithArea
     });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe kirjautumisessa', error: error.message });
@@ -189,12 +205,13 @@ router.get('/me', async (req, res) => {
 
     const GameSession = (await import('../models/GameSession.js')).default;
     const session = await GameSession.findOne({ userId: decoded.id });
+    const sessionWithArea = await attachAreaIfSession(session);
 
     res.json({
       loggedIn: true,
       username: user.username,
       gameSessionId: session ? session._id : null,
-      session: session || null
+      session: sessionWithArea
     });
   } catch (error) {
     res.status(401).json({ message: 'Istunto vanhentunut' });

@@ -26,6 +26,7 @@ const gameSessionSchema = new mongoose.Schema({
   currentTurn: { type: String, default: null },
   repairPoints: { type: Number, default: 0 },
   hasEnteredCombat: { type: Boolean, default: false }, // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa (ratkaisee "Jatka taivalta" -kohteen oikein uloskirjautumisen jälkeenkin)
+  currentAreaIndex: { type: Number, default: 1 }, // 🗺️ Mikä 10 alueesta on käynnissä (viittaa Area.order-kenttään). Kuolema EI muuta tätä.
   // 🔥 TALLENNUSPISTE (nuotio): viimeisin hetki jolloin pelaaja lepäsi hirviön kaatamisen jälkeen.
   // Jos hahmo kuolee taistelussa, peli palautetaan näihin arvoihin - ei nollaan, mutta ei myöskään
   // mihinkään sen jälkeen kertyneeseen. Asetetaan alkuun pelin alussa ja päivitetään joka voiton jälkeen.

@@ -5,7 +5,10 @@ import Log from '../models/Log.js';
 import Monster from '../models/Monster.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('❌ JWT_SECRET puuttuu .env-tiedostosta - palvelinta ei käynnistetä turvattomalla oletusarvolla.');
+}
 
 const rollDice = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -115,6 +118,10 @@ router.post('/turn', async (req, res) => {
             monsterDamageDealt = rollDice(1, monster.damageMax);
             currentPlayerHp = Math.max(0, currentPlayerHp - monsterDamageDealt);
             combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti ${monsterAttackRoll}) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
+
+            if (currentPlayerHp <= 0) {
+              combatLogEntries.push(`💀 Sait kuolettavan iskun ja vaivut pimeyteen...`);
+            }
           } else {
             combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä (Heitti ${monsterAttackRoll}) ja raapaisi ohi vaatteidesi.`);
           }

@@ -4,9 +4,24 @@ import GameSession from '../models/GameSession.js';
 import CharacterClass from '../models/CharacterClass.js';
 import Log from '../models/Log.js';
 import Monster from '../models/Monster.js';
+import Area from '../models/Area.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'ikimetsa_salaisuus_123';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('❌ JWT_SECRET puuttuu .env-tiedostosta - palvelinta ei käynnistetä turvattomalla oletusarvolla.');
+}
+const TOTAL_AREAS = 10;
+
+// 🗺️ Hakee session.currentAreaIndex:tä vastaavan Area-dokumentin ja liittää sen
+// vastaukseen "currentArea"-kenttänä. Ei ole osa GameSession-skeemaa itsessään,
+// vaan lasketaan aina tuoreeltaan vastausta rakennettaessa.
+const attachAreaToSession = async (session) => {
+  const areaOrder = Math.min(session.currentAreaIndex || 1, TOTAL_AREAS);
+  const area = await Area.findOne({ order: areaOrder });
+  const sessionObject = session.toObject ? session.toObject() : session;
+  return { ...sessionObject, currentArea: area || null };
+};
 
 router.get('/classes', async (req, res) => {
   try {
@@ -37,10 +52,13 @@ router.post('/start-game', async (req, res) => {
       return res.status(404).json({ message: 'Valittua hahmoluokkaa ei löydy tietokannasta' });
     }
 
-    // 🔒 LUKITTU: Haetaan tietokannasta nimenomaan Varjohahmo ensimmäiseksi vastustajaksi!
-    let dbMonster = await Monster.findOne({ name: 'Varjohahmo' });
-    
-    // Vararatkaisu vain jos tietokannassa ei jostain syystä ole vielä ladattuna mörköjä
+    // 🗺️ Ensimmäinen alue (order: 1) määrää ensimmäisen vastustajan - ei enää kovakoodattu
+    let firstArea = await Area.findOne({ order: 1 });
+    let firstMonsterName = firstArea ? firstArea.monsterName : 'Varjohahmo';
+
+    let dbMonster = await Monster.findOne({ name: firstMonsterName });
+
+    // Vararatkaisu vain jos tietokannassa ei jostain syystä ole vielä ladattuna mörköjä/alueita
     if (!dbMonster) {
       dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
     }
@@ -67,6 +85,7 @@ router.post('/start-game', async (req, res) => {
       currentTurn: null,
       repairPoints: 5,
       hasEnteredCombat: false,
+      currentAreaIndex: 1,
       // 🔥 Ensimmäinen tallennuspiste on itse pelin alku - jos hahmo kuolee ennen ensimmäistä
       // voittoa, tänne palataan (nolla XP, taso 1, alkuperäinen maksimikunto)
       checkpoint: { xp: 0, level: 1, maxHp: hpValue }
@@ -76,12 +95,13 @@ router.post('/start-game', async (req, res) => {
 
     const newLog = new Log({
       action: 'GAME_START',
-      details: `Pelaaja alusti pelin hahmolla ${charClass.name}. Ensimmäinen vastus lukittu: ${dbMonster.name} (Lvl ${dbMonster.level})`,
+      details: `Pelaaja alusti pelin hahmolla ${charClass.name}. Ensimmäinen alue: ${firstArea ? firstArea.name : 'Metsän reuna'}, vastus: ${dbMonster.name} (Lvl ${dbMonster.level})`,
       performedBy: userId
     });
     await newLog.save();
 
-    res.status(201).json(newSession);
+    const responseBody = await attachAreaToSession(newSession);
+    res.status(201).json(responseBody);
   } catch (error) {
     res.status(500).json({ message: 'Pelin aloitus epäonnistui', error: error.message });
   }
@@ -158,6 +178,8 @@ router.post('/enter-combat', async (req, res) => {
 // 🔥 Kuoleman jälkeinen paluu viimeisimpään tallennuspisteeseen (nuotioon).
 // Palauttaa hahmon täyteen kuntoon ja täysiin korjauspisteisiin, säilyttäen
 // tallennuspisteen kokemuspisteet/tason - ei nykyisiä, koska niitä ei ole vielä tallennettu.
+// TÄRKEÄÄ: currentAreaIndex EI muutu tässä - kuolema palauttaa aina samaan alueeseen
+// jossa checkpoint viimeksi asetettiin, ei alkuun asti.
 const STARTING_REPAIR_POINTS = 5;
 
 router.post('/respawn', async (req, res) => {
@@ -178,7 +200,7 @@ router.post('/respawn', async (req, res) => {
       return res.status(400).json({ message: 'Hahmo ei ole kuollut - paluuta tallennuspisteeseen ei voi tehdä.' });
     }
 
-    // Haetaan tuore hirviö samalla tavalla kuin pelin alussa
+    // Haetaan tuore hirviö samalla tavalla kuin pelin alussa - sama hirviö/alue kuin ennen kuolemaa
     let dbMonster = await Monster.findOne({ name: session.currentMonsterName || 'Varjohahmo' });
     if (!dbMonster) {
       dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
@@ -215,15 +237,17 @@ router.post('/respawn', async (req, res) => {
     });
     await newLog.save();
 
-    res.json(session);
+    const responseBody = await attachAreaToSession(session);
+    res.json(responseBody);
   } catch (error) {
     res.status(500).json({ message: 'Tallennuspisteeseen palaaminen epäonnistui', error: error.message });
   }
 });
 
-// 🔥 Voiton jälkeen: pelaaja lähtee nuotiolta jatkamaan matkaa. Valmistellaan seuraava
-// kohtaaminen palvelimella - toistaiseksi aina sama Varjohahmo, myöhemmin tästä voi
-// arpoa/valita seuraavan alueen hirviön.
+// 🔥 Voiton jälkeen: pelaaja lähtee nuotiolta jatkamaan matkaa SEURAAVAAN alueeseen.
+// Tämä on kohta jossa aluejärjestys oikeasti etenee - currentAreaIndex kasvaa yhdellä,
+// ja uusi alue määrää seuraavan hirviön. Jos pelaaja on jo viimeisellä alueella (Kirottujen
+// Velho voitettu), jäädään toistaiseksi viimeiselle alueelle (peli ei vielä pääty erikseen).
 router.post('/continue-journey', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -245,21 +269,39 @@ router.post('/continue-journey', async (req, res) => {
       return res.status(400).json({ message: 'Nykyistä vastustajaa ei ole vielä voitettu.' });
     }
 
-    let dbMonster = await Monster.findOne({ name: session.currentMonsterName || 'Varjohahmo' });
+    const nextAreaIndex = Math.min((session.currentAreaIndex || 1) + 1, TOTAL_AREAS);
+    const nextArea = await Area.findOne({ order: nextAreaIndex });
+
+    let dbMonster = null;
+    if (nextArea) {
+      dbMonster = await Monster.findOne({ name: nextArea.monsterName });
+    }
     if (!dbMonster) {
-      dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
+      dbMonster = { name: session.currentMonsterName || 'Varjohahmo', hp: '25', level: '1' };
     }
 
+    session.currentAreaIndex = nextAreaIndex;
+    session.currentMonsterName = dbMonster.name;
+    session.currentMonsterLevel = parseInt(dbMonster.level) || 1;
     session.currentMonsterHp = parseInt(dbMonster.hp) || 25;
     session.hasEnteredCombat = false;
     session.combatInitiative = null;
     session.currentTurn = null;
     session.combatLogs = [];
 
+    // 🔥 Nuotiolla levätään oikeasti: täysi kunto ja korjattu ase, niin kuin tarinateksti lupaa
+    session.stats.hp = session.stats.maxHp;
+    if (session.inventory[0]) {
+      session.inventory[0].durability = session.inventory[0].maxDurability;
+    }
+
+    session.markModified('stats');
+    session.markModified('inventory');
     session.markModified('combatLogs');
     await session.save();
 
-    res.json(session);
+    const responseBody = await attachAreaToSession(session);
+    res.json(responseBody);
   } catch (error) {
     res.status(500).json({ message: 'Matkan jatkaminen epäonnistui', error: error.message });
   }
