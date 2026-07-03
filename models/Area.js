@@ -10,6 +10,7 @@ const areaSchema = new mongoose.Schema({
   locationLabel: { type: String, required: true }, // liikkumisruudun otsikko, esim. "SIJAINTI: SUO"
   monsterName: { type: String, required: true }, // viittaa Monster.name-kenttään
   encounterText: { type: String, required: true }, // teksti kun kuutonen heitetään ja taistelu alkaa
+  backgroundClass: { type: String, default: 'traveling-background' }, // 🎨 Liikkumisruudun tausta-animaation CSS-luokka (MovementStyles.css)
   goodRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 3-5
   badRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 1-2
   mechanic: { type: String, default: 'normal' } // 'normal' | 'swamp_sink' jne - laajennettavissa myöhemmin

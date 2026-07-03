@@ -28,6 +28,7 @@ export const seedAreas = async () => {
         name: 'Metsän reuna',
         locationLabel: 'SIJAINTI: METSÄN POLKU',
         monsterName: 'Varjohahmo',
+        backgroundClass: 'traveling-background',
         encounterText: 'Äkillinen kylmyys jähmettää askeleesi. Pimeys tiivistyy suoraan silmiesi edessä...',
         goodRollTexts: [
           'Etenet sakean sumun seassa. Metsä tuntuu tarkkailevan jokaista hengitystäsi.',
@@ -45,6 +46,7 @@ export const seedAreas = async () => {
         name: 'Suo',
         locationLabel: 'SIJAINTI: SUO',
         monsterName: 'Suolieju',
+        backgroundClass: 'traveling-background-suo',
         encounterText: 'Lieju kuohahtaa jalkojesi alla. Jokin nousee pinnan alta kohti sinua...',
         goodRollTexts: [
           'Löydät kiinteän polun mättäiden välistä ja etenet varovasti.',
