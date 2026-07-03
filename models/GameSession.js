@@ -24,7 +24,8 @@ const gameSessionSchema = new mongoose.Schema({
   currentMonsterHp: { type: Number, default: 25 },
   combatInitiative: { type: String, default: null },
   currentTurn: { type: String, default: null },
-  repairPoints: { type: Number, default: 0 }
+  repairPoints: { type: Number, default: 0 },
+  hasEnteredCombat: { type: Boolean, default: false } // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa (ratkaisee "Jatka taivalta" -kohteen oikein uloskirjautumisen jälkeenkin)
 }, { timestamps: true });
 
 export default mongoose.model('GameSession', gameSessionSchema);

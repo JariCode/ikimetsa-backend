@@ -65,7 +65,8 @@ router.post('/start-game', async (req, res) => {
       currentMonsterHp: startingMonsterHp,
       combatInitiative: null,
       currentTurn: null,
-      repairPoints: 5
+      repairPoints: 5,
+      hasEnteredCombat: false
     });
 
     await newSession.save();
@@ -80,6 +81,31 @@ router.post('/start-game', async (req, res) => {
     res.status(201).json(newSession);
   } catch (error) {
     res.status(500).json({ message: 'Pelin aloitus epäonnistui', error: error.message });
+  }
+});
+
+// 🌟 Merkitään pelisessioon että pelaaja on astunut taisteluun (liikkumisnopalla heitetty kuutonen).
+// Tämän avulla "Jatka taivalta" osaa jatkossa palauttaa pelaajan oikeaan paikkaan
+// (liikkumiseen vai suoraan taisteluun) vaikka hän kirjautuisi välissä ulos.
+router.post('/enter-combat', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    session.hasEnteredCombat = true;
+    await session.save();
+
+    res.json({ hasEnteredCombat: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Taisteluun siirtymisen tallennus epäonnistui', error: error.message });
   }
 });
 
