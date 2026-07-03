@@ -22,6 +22,7 @@ const gameSessionSchema = new mongoose.Schema({
   currentMonsterName: { type: String, default: 'Varjohahmo' }, 
   currentMonsterLevel: { type: Number, default: 1 },         
   currentMonsterHp: { type: Number, default: 25 },
+  currentMonsterCssClass: { type: String, default: 'varjohahmo' }, // 🎨 Määrää minkä hirviön jumpscare-taide näytetään (viittaa Monster.cssClass-kenttään)
   combatInitiative: { type: String, default: null },
   currentTurn: { type: String, default: null },
   repairPoints: { type: Number, default: 0 },

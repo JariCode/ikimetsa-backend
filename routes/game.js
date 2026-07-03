@@ -81,6 +81,7 @@ router.post('/start-game', async (req, res) => {
       currentMonsterName: dbMonster.name, 
       currentMonsterLevel: parseInt(dbMonster.level),
       currentMonsterHp: startingMonsterHp,
+      currentMonsterCssClass: dbMonster.cssClass || 'varjohahmo',
       combatInitiative: null,
       currentTurn: null,
       repairPoints: 5,
@@ -220,6 +221,7 @@ router.post('/respawn', async (req, res) => {
     session.repairPoints = STARTING_REPAIR_POINTS;
 
     session.currentMonsterHp = freshMonsterHp;
+    session.currentMonsterCssClass = dbMonster.cssClass || 'varjohahmo';
     session.combatInitiative = null;
     session.currentTurn = null;
     session.hasEnteredCombat = false;
@@ -284,6 +286,7 @@ router.post('/continue-journey', async (req, res) => {
     session.currentMonsterName = dbMonster.name;
     session.currentMonsterLevel = parseInt(dbMonster.level) || 1;
     session.currentMonsterHp = parseInt(dbMonster.hp) || 25;
+    session.currentMonsterCssClass = dbMonster.cssClass || 'varjohahmo';
     session.hasEnteredCombat = false;
     session.combatInitiative = null;
     session.currentTurn = null;
