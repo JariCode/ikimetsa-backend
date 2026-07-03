@@ -25,7 +25,15 @@ const gameSessionSchema = new mongoose.Schema({
   combatInitiative: { type: String, default: null },
   currentTurn: { type: String, default: null },
   repairPoints: { type: Number, default: 0 },
-  hasEnteredCombat: { type: Boolean, default: false } // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa (ratkaisee "Jatka taivalta" -kohteen oikein uloskirjautumisen jälkeenkin)
+  hasEnteredCombat: { type: Boolean, default: false }, // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa (ratkaisee "Jatka taivalta" -kohteen oikein uloskirjautumisen jälkeenkin)
+  // 🔥 TALLENNUSPISTE (nuotio): viimeisin hetki jolloin pelaaja lepäsi hirviön kaatamisen jälkeen.
+  // Jos hahmo kuolee taistelussa, peli palautetaan näihin arvoihin - ei nollaan, mutta ei myöskään
+  // mihinkään sen jälkeen kertyneeseen. Asetetaan alkuun pelin alussa ja päivitetään joka voiton jälkeen.
+  checkpoint: {
+    xp: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    maxHp: { type: Number, default: 40 }
+  }
 }, { timestamps: true });
 
 export default mongoose.model('GameSession', gameSessionSchema);

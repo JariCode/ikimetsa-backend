@@ -66,7 +66,10 @@ router.post('/start-game', async (req, res) => {
       combatInitiative: null,
       currentTurn: null,
       repairPoints: 5,
-      hasEnteredCombat: false
+      hasEnteredCombat: false,
+      // 🔥 Ensimmäinen tallennuspiste on itse pelin alku - jos hahmo kuolee ennen ensimmäistä
+      // voittoa, tänne palataan (nolla XP, taso 1, alkuperäinen maksimikunto)
+      checkpoint: { xp: 0, level: 1, maxHp: hpValue }
     });
 
     await newSession.save();
@@ -149,6 +152,116 @@ router.post('/enter-combat', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Taisteluun siirtymisen tallennus epäonnistui', error: error.message });
+  }
+});
+
+// 🔥 Kuoleman jälkeinen paluu viimeisimpään tallennuspisteeseen (nuotioon).
+// Palauttaa hahmon täyteen kuntoon ja täysiin korjauspisteisiin, säilyttäen
+// tallennuspisteen kokemuspisteet/tason - ei nykyisiä, koska niitä ei ole vielä tallennettu.
+const STARTING_REPAIR_POINTS = 5;
+
+router.post('/respawn', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    // 🛡️ Palvelin päättää onko hahmo oikeasti kuollut - ei luoteta clientin väitteeseen
+    if (session.stats.hp > 0) {
+      return res.status(400).json({ message: 'Hahmo ei ole kuollut - paluuta tallennuspisteeseen ei voi tehdä.' });
+    }
+
+    // Haetaan tuore hirviö samalla tavalla kuin pelin alussa
+    let dbMonster = await Monster.findOne({ name: session.currentMonsterName || 'Varjohahmo' });
+    if (!dbMonster) {
+      dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
+    }
+    const freshMonsterHp = parseInt(dbMonster.hp) || 25;
+
+    const checkpoint = session.checkpoint || { xp: 0, level: 1, maxHp: session.stats.maxHp || 40 };
+
+    session.stats.xp = checkpoint.xp;
+    session.stats.level = checkpoint.level;
+    session.stats.maxHp = checkpoint.maxHp;
+    session.stats.hp = checkpoint.maxHp;
+
+    if (session.inventory[0]) {
+      session.inventory[0].durability = session.inventory[0].maxDurability;
+    }
+    session.repairPoints = STARTING_REPAIR_POINTS;
+
+    session.currentMonsterHp = freshMonsterHp;
+    session.combatInitiative = null;
+    session.currentTurn = null;
+    session.hasEnteredCombat = false;
+    session.combatLogs = [`🔥 Heräät nuotion äärestä. Taipaleesi jatkuu tasolta ${checkpoint.level} (${checkpoint.xp} XP).`];
+
+    session.markModified('stats');
+    session.markModified('inventory');
+    session.markModified('combatLogs');
+    await session.save();
+
+    const newLog = new Log({
+      action: 'PLAYER_RESPAWN',
+      details: `Pelaaja kuoli ja palasi tallennuspisteeseen (taso ${checkpoint.level}, ${checkpoint.xp} XP)`,
+      performedBy: userId
+    });
+    await newLog.save();
+
+    res.json(session);
+  } catch (error) {
+    res.status(500).json({ message: 'Tallennuspisteeseen palaaminen epäonnistui', error: error.message });
+  }
+});
+
+// 🔥 Voiton jälkeen: pelaaja lähtee nuotiolta jatkamaan matkaa. Valmistellaan seuraava
+// kohtaaminen palvelimella - toistaiseksi aina sama Varjohahmo, myöhemmin tästä voi
+// arpoa/valita seuraavan alueen hirviön.
+router.post('/continue-journey', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    // 🛡️ Palvelin varmistaa ettei tätä voi kutsua kesken elävän taistelun tai kuolleena
+    if (session.stats.hp <= 0) {
+      return res.status(400).json({ message: 'Hahmo on kaatunut - käytä nuotiolta heräämistä.' });
+    }
+    if (session.currentMonsterHp > 0) {
+      return res.status(400).json({ message: 'Nykyistä vastustajaa ei ole vielä voitettu.' });
+    }
+
+    let dbMonster = await Monster.findOne({ name: session.currentMonsterName || 'Varjohahmo' });
+    if (!dbMonster) {
+      dbMonster = { name: 'Varjohahmo', hp: '25', level: '1' };
+    }
+
+    session.currentMonsterHp = parseInt(dbMonster.hp) || 25;
+    session.hasEnteredCombat = false;
+    session.combatInitiative = null;
+    session.currentTurn = null;
+    session.combatLogs = [];
+
+    session.markModified('combatLogs');
+    await session.save();
+
+    res.json(session);
+  } catch (error) {
+    res.status(500).json({ message: 'Matkan jatkaminen epäonnistui', error: error.message });
   }
 });
 

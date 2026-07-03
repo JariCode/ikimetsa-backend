@@ -153,6 +153,20 @@ router.post('/turn', async (req, res) => {
         session.stats.xp = currentXp;
         session.stats.level = currentLevel;
         session.stats.maxHp = currentMaxHp;
+
+        // 🔥 NUOTIO: pelaaja lepää voiton jälkeen - täysi kunto ja korjattu ase heti,
+        // ei vasta kun matkaa jatketaan. Tämä hetki tallennetaan myös tallennuspisteeksi.
+        session.stats.hp = currentMaxHp;
+        if (session.inventory[0]) {
+          session.inventory[0].durability = session.inventory[0].maxDurability;
+        }
+
+        session.checkpoint = {
+          xp: currentXp,
+          level: currentLevel,
+          maxHp: currentMaxHp
+        };
+        session.markModified('checkpoint');
         
         const currentPoints = parseInt(session.repairPoints) || 0;
         session.repairPoints = currentPoints + 2;
