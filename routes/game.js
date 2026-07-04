@@ -104,6 +104,87 @@ router.post('/start-game', async (req, res) => {
   }
 });
 
+// 🧑‍🤝‍🧑 Kumppanin löytäminen - kutsutaan kun pelaaja heittää ensimmäisen kuutosen alueella
+// jolla on companionEvent eikä kumppania ole vielä löydetty. Ei vie taisteluun, vaan
+// näyttää löytöruudun ja palauttaa pelaajan takaisin samalle liikkumisruudulle.
+router.post('/find-companion', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    if (session.companionFound) {
+      return res.status(400).json({ message: 'Kumppani on jo löydetty.' });
+    }
+
+    const currentArea = await Area.findOne({ order: parseInt(session.currentAreaIndex) || 1 });
+    if (!currentArea || !currentArea.companionEvent || !currentArea.companionEvent.name) {
+      return res.status(400).json({ message: 'Tällä alueella ei ole kumppanitapahtumaa.' });
+    }
+
+    session.companionFound = true;
+    session.companionActive = true;
+    session.companionName = currentArea.companionEvent.name;
+    session.companionHp = session.companionMaxHp || 30;
+    session.companionWeaponName = currentArea.companionEvent.weaponName || 'Vanha ase';
+    session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
+    session.combatLogs = [...(session.combatLogs || []), `🧑‍🤝‍🧑 ${currentArea.companionEvent.name} liittyy seuraasi.`];
+
+    session.markModified('combatLogs');
+    await session.save();
+
+    const newLog = new Log({
+      action: 'COMPANION_FOUND',
+      details: `Pelaaja löysi matkakumppanin: ${currentArea.companionEvent.name}`,
+      performedBy: userId
+    });
+    await newLog.save();
+
+    const responseBody = await attachAreaToSession(session);
+    res.json(responseBody);
+  } catch (error) {
+    res.status(500).json({ message: 'Kumppanin löytäminen epäonnistui', error: error.message });
+  }
+});
+
+// 📝 Tallentaa yksittäisen lokirivin, jota ei muuten tallennettaisi minnekään -
+// käytetään liikkumisruudun nopanheittoteksteille ja vastaavalle selainpuolen
+// tekstille joka ei muuten koskaan kulkisi palvelimen kautta.
+router.post('/log-message', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const { message } = req.body;
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ message: 'Viesti puuttuu.' });
+    }
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    session.combatLogs = [...(session.combatLogs || []), message];
+    session.markModified('combatLogs');
+    await session.save();
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: 'Lokin tallennus epäonnistui', error: error.message });
+  }
+});
+
 const MOVEMENT_XP_REWARD = 50;
 
 router.post('/enter-combat', async (req, res) => {
@@ -208,7 +289,19 @@ router.post('/respawn', async (req, res) => {
     session.combatInitiative = null;
     session.currentTurn = null;
     session.hasEnteredCombat = false;
-    session.combatLogs = [`🔥 Heräät nuotion äärestä. Taipaleesi jatkuu tasolta ${checkpoint.level} (${checkpoint.xp} XP).`];
+
+    // 🧑‍🤝‍🧑 Kumppani herää mukanasi jos hän on löydetty - paranee täyteen kuntoon
+    let respawnMessage = `🔥 Heräät nuotion äärestä. Taipaleesi jatkuu tasolta ${checkpoint.level} (${checkpoint.xp} XP).`;
+    if (session.companionFound) {
+      const wasDown = !session.companionActive;
+      session.companionActive = true;
+      session.companionHp = session.companionMaxHp || 30;
+      session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
+      if (wasDown) {
+        respawnMessage += ` ${session.companionName} herää myös vierestäsi, haavat parantuneina.`;
+      }
+    }
+    session.combatLogs = [respawnMessage];
 
     session.markModified('stats');
     session.markModified('inventory');
@@ -291,7 +384,19 @@ router.post('/continue-journey', async (req, res) => {
     session.hasEnteredCombat = false;
     session.combatInitiative = null;
     session.currentTurn = null;
-    session.combatLogs = [];
+
+    // 🧑‍🤝‍🧑 Kumppani paranee täyteen kuntoon nuotiolla ja palaa mukaan jos oli kaatunut
+    if (session.companionFound) {
+      const wasDown = !session.companionActive;
+      session.companionActive = true;
+      session.companionHp = session.companionMaxHp || 30;
+      session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
+      session.combatLogs = wasDown
+        ? [`${session.companionName} toipuu nuotion ääressä ja liittyy taas rinnallesi.`]
+        : [];
+    } else {
+      session.combatLogs = [];
+    }
 
     session.checkpoint = {
       xp: session.stats.xp,

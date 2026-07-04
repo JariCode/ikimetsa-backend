@@ -114,12 +114,18 @@ export const seedAreas = async () => {
         ]
       },
       {
-        order: 6,
-        name: 'Luolasto (syvemmällä)',
-        locationLabel: 'SIJAINTI: LUOLASTON SYVYYS',
-        monsterName: 'Jättiläishämähäkki',
-        backgroundClass: 'traveling-background-luolasto',
-        encounterText: 'Verkkoja roikkuu joka puolella. Kahdeksan silmää tuikkii pimeydessä edessäsi...',
+      order: 6,
+      name: 'Luolasto (syvemmällä)',
+      locationLabel: 'SIJAINTI: LUOLASTON SYVYYS',
+      monsterName: 'Jättiläishämähäkki',
+      backgroundClass: 'traveling-background-luolasto',
+      encounterText: 'Verkkoja roikkuu joka puolella. Kahdeksan silmää tuikkii pimeydessä edessäsi...',
+      companionEvent: {
+        name: 'Aarne',
+        // 🔥 TÄMÄ RIVI TÄYSIN YHDELLE RIVILLE ILMAN KONEEN ENTERIÄ:
+        discoveryText: 'Soihtusi valo osuu paksuun hämähäkinseittiin kallion kolossa.\nSen sisällä tuskin hengittää sidottu hahmo - eksynyt vaeltaja, kokonaan seitin peitossa mutta yhä elossa.',
+        weaponName: 'Ruosteinen tikari'
+      },
         goodRollTexts: [
           'Väistät hämähäkinseittejä varovasti edetessäsi syvemmälle.',
           'Kuulet rapinaa kallion koloista, mutta mikään ei hyökkää.',

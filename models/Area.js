@@ -11,6 +11,14 @@ const areaSchema = new mongoose.Schema({
   monsterName: { type: String, required: true }, // viittaa Monster.name-kenttään
   encounterText: { type: String, required: true }, // teksti kun kuutonen heitetään ja taistelu alkaa
   backgroundClass: { type: String, default: 'traveling-background' }, // 🎨 Liikkumisruudun tausta-animaation CSS-luokka (MovementStyles.css)
+  // 🧑‍🤝‍🧑 Matkakumppanin löytötapahtuma - vain sillä yhdellä alueella jolla tämä on asetettu.
+  // Ensimmäinen kuutonen tällä alueella laukaisee löytöruudun taistelun sijaan (jos kumppania
+  // ei ole vielä löydetty), vasta TOINEN kuutonen johtaa oikeaan taisteluun.
+  companionEvent: {
+    name: { type: String, default: null },
+    discoveryText: { type: String, default: null },
+    weaponName: { type: String, default: null }
+  },
   goodRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 3-5
   badRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 1-2
   mechanic: { type: String, default: 'normal' } // 'normal' | 'swamp_sink' jne - laajennettavissa myöhemmin

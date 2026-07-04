@@ -28,6 +28,17 @@ const gameSessionSchema = new mongoose.Schema({
   repairPoints: { type: Number, default: 0 },
   hasEnteredCombat: { type: Boolean, default: false }, // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa
   currentAreaIndex: { type: Number, default: 1 }, // 🗺️ Mikä 10 alueesta on käynnissä (viittaa Area.order-kenttään). Kuolema EI muuta tätä.
+
+  // 🧑‍🤝‍🧑 Matkakumppani - löytyy kerran (companionFound estää löytöruudun toistumisen),
+  // ja kun aktiivinen, osallistuu jokaiseen taisteluun pelaajan hyökkäysvuoron yhteydessä.
+  companionFound: { type: Boolean, default: false },
+  companionActive: { type: Boolean, default: false }, // false = kaatunut väliaikaisesti, palautuu nuotiolla/respawnissa
+  companionName: { type: String, default: null },
+  companionHp: { type: Number, default: 30 },
+  companionMaxHp: { type: Number, default: 30 },
+  companionWeaponName: { type: String, default: null },
+  companionWeaponDurability: { type: Number, default: 8 },
+  companionWeaponMaxDurability: { type: Number, default: 8 },
   
   // 🔥 LISÄTTY: Kertoo onko Velho lyöty ja peli pelattu onnistuneesti läpi!
   isGameCompleted: { type: Boolean, default: false },

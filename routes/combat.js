@@ -110,6 +110,27 @@ router.post('/turn', async (req, res) => {
               combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Svingasit ohi kohteesta ${monster.name}.`);
             }
           }
+
+          // 🧑‍🤝‍🦯 Kumppani iskee samalla jos aktiivinen - oma erillinen heitto, vahinko ja ase
+          if (session.companionActive && monster.hp > 0) {
+            if ((session.companionWeaponDurability || 0) <= 0) {
+              combatLogEntries.push(`⚠️ ${session.companionName}:n ase (${session.companionWeaponName}) on rikki! Hän ei voi hyökätä tehokkaasti.`);
+            } else {
+              const companionRoll = rollDice(1, 20) + 3; // Kiinteä bonus, ei skaalaudu tason mukana
+              if (companionRoll >= monster.defense) {
+                const companionDamage = rollDice(1, 6);
+                monster.hp = Math.max(0, monster.hp - companionDamage);
+                combatLogEntries.push(`🗡️ ${session.companionName} iskee ${session.companionWeaponName}:llaan samalla ja tekee ${companionDamage} pistettä vahinkoa kohteeseen ${monster.name}.`);
+
+                session.companionWeaponDurability = Math.max(0, (parseInt(session.companionWeaponDurability) || 0) - 1);
+                if (session.companionWeaponDurability === 0) {
+                  combatLogEntries.push(`RAKS! ${session.companionName}:n ase ${session.companionWeaponName} hajosi liitoksistaan!`);
+                }
+              } else {
+                combatLogEntries.push(`🗡️ ${session.companionName} yrittää iskeä, mutta osuu ohi.`);
+              }
+            }
+          }
           nextTurn = 'hirviö';
           session.currentTurn = nextTurn;
 
@@ -118,7 +139,27 @@ router.post('/turn', async (req, res) => {
           const monsterAttackRoll = monsterRawRoll + monster.attackBonus;
           displayRoll = monsterRawRoll; // näytetään hirviön raaka d20-heitto nopassa
 
-          if (monsterAttackRoll >= playerDefense) {
+          // 🎯 Jos kumppani on mukana ja pystyssä, hirviö arpoo kohteekseen joko
+          // sinut tai kumppanin (50/50). Kumppanin kaatuminen ei koskaan päätä peliäsi -
+          // hän vain jää pois taistelusta kunnes toipuu seuraavalla nuotiolla/heräämisellä.
+          const targetsCompanion = session.companionActive && (session.companionHp || 0) > 0 && Math.random() < 0.5;
+
+          if (targetsCompanion) {
+            const companionDefense = 9;
+            if (monsterAttackRoll >= companionDefense) {
+              const companionDamageTaken = rollDice(1, monster.damageMax);
+              const newCompanionHp = Math.max(0, (session.companionHp || 0) - companionDamageTaken);
+              session.companionHp = newCompanionHp;
+              combatLogEntries.push(`💥 ${monster.name} iskee ${session.companionName}:a kohti! (Heitti ${monsterAttackRoll}) ja osuu! ${session.companionName} menettää ${companionDamageTaken} HP.`);
+
+              if (newCompanionHp <= 0) {
+                session.companionActive = false;
+                combatLogEntries.push(`💫 ${session.companionName} kaatuu taistelukyvyttömäksi. Hän ei kuole, mutta ei voi enää taistella ennen kuin toipuu nuotion ääressä.`);
+              }
+            } else {
+              combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä ${session.companionName}:a (Heitti ${monsterAttackRoll}) mutta osuu ohi.`);
+            }
+          } else if (monsterAttackRoll >= playerDefense) {
             monsterDamageDealt = rollDice(1, monster.damageMax);
             currentPlayerHp = Math.max(0, currentPlayerHp - monsterDamageDealt);
             combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti ${monsterAttackRoll}) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
@@ -217,7 +258,14 @@ router.post('/turn', async (req, res) => {
             initiativeWinner: null,
             nextTurn: null,
             diceRoll: displayRoll,
-            isGameCompleted: true // 🔥 Lähetetään frontille käsky siirtyä VictoryScreeniin!
+            isGameCompleted: true, // 🔥 Lähetetään frontille käsky siirtyä VictoryScreeniin!
+            companionActive: session.companionActive,
+            companionHp: session.companionHp,
+            companionMaxHp: session.companionMaxHp,
+            companionName: session.companionName,
+            companionWeaponName: session.companionWeaponName,
+            companionWeaponDurability: session.companionWeaponDurability,
+            companionWeaponMaxDurability: session.companionWeaponMaxDurability
           });
         }
       } else {
@@ -250,7 +298,14 @@ router.post('/turn', async (req, res) => {
       repairPoints: session.repairPoints,
       initiativeWinner,
       nextTurn,
-      diceRoll: displayRoll
+      diceRoll: displayRoll,
+      companionActive: session.companionActive,
+      companionHp: session.companionHp,
+      companionMaxHp: session.companionMaxHp,
+      companionName: session.companionName,
+      companionWeaponName: session.companionWeaponName,
+      companionWeaponDurability: session.companionWeaponDurability,
+      companionWeaponMaxDurability: session.companionWeaponMaxDurability
     });
 
   } catch (error) {
@@ -276,6 +331,25 @@ router.post('/repair-weapon', async (req, res) => {
     const currentPoints = parseInt(session.repairPoints) || 0;
     if (currentPoints < 2) {
       return res.status(400).json({ message: 'Ei tarpeeksi korjauspisteitä (vaatii 2pts)' });
+    }
+
+    // 🎯 Kohde: 'player' (oletus) tai 'companion' - molemmat käyttävät samaa yhteistä korjauspistepottia
+    const target = req.body?.target === 'companion' ? 'companion' : 'player';
+
+    if (target === 'companion') {
+      if (!session.companionActive) {
+        return res.status(400).json({ message: 'Kumppani ei ole mukana taistelussa juuri nyt.' });
+      }
+      const maxDurability = parseInt(session.companionWeaponMaxDurability) || 8;
+      session.repairPoints = currentPoints - 2;
+      session.companionWeaponDurability = maxDurability;
+      session.combatLogs = [...(session.combatLogs || []), `🔧 Korjaat ${session.companionName}:n aseen (${session.companionWeaponName}) takaisin huippukuntoon.`];
+
+      session.markModified('repairPoints');
+      session.markModified('combatLogs');
+      await session.save();
+
+      return res.json({ session, combatLogs: session.combatLogs });
     }
 
     let weapon = session.inventory[0];
