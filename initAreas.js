@@ -94,7 +94,7 @@ export const seedAreas = async () => {
           'Aalto keikauttaa lauttaa ja kastut viileällä vedellä.',
           'Väsyneet käsivartesi tekevät soutamisesta raskasta ja hidasta.'
         ]
-      },
+      }, 
       {
         order: 5,
         name: 'Luolasto',

@@ -89,12 +89,18 @@ router.post('/turn', async (req, res) => {
           if (weapon && weapon.durability <= 0) {
             combatLogEntries.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi hyökätä tehokkaasti.`);
           } else {
-            const attackRoll = rollDice(1, 20);
-            displayRoll = attackRoll;
+            // 🎯 Tasosta kasvava hyökkäysbonus - ilman tätä pelaajan osumatarkkuus ei koskaan
+            // parantunut tasonnousuista huolimatta, jolloin myöhemmät alueet (isompi defense)
+            // muuttuivat käytännössä voittamattomiksi. +1 per taso.
+            const playerLevel = parseInt(session.stats.level) || 1;
+            const playerAttackBonus = playerLevel;
+            const rawAttackRoll = rollDice(1, 20);
+            const attackRoll = rawAttackRoll + playerAttackBonus;
+            displayRoll = rawAttackRoll;
             if (attackRoll >= monster.defense) {
               playerDamageDealt = rollDice(2, 8);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
-              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
+              combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
 
               if (weapon) {
                 weapon.durability = Math.max(0, (parseInt(weapon.durability) || 0) - 1);
@@ -103,7 +109,7 @@ router.post('/turn', async (req, res) => {
                 }
               }
             } else {
-              combatLogEntries.push(`⚔️ Heitit d20: [${attackRoll}] - Svingasit ohi kohteesta ${monster.name}.`);
+              combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Svingasit ohi kohteesta ${monster.name}.`);
             }
           }
           nextTurn = 'hirviö';
@@ -201,6 +207,7 @@ router.post('/turn', async (req, res) => {
     // Palautetaan kaikki dynaamiset progression arvot JSON-vastauksessa frontendille lennosta
     res.json({
       combatLogs: session.combatLogs,
+      newLogs: combatLogEntries, // 🌟 Vain tämän vuoron uudet rivit - frontend ei enää arvaile montako riviä on uusia
       playerHp: session.stats.hp,
       playerMaxHp: session.stats.maxHp,
       playerLevel: session.stats.level,

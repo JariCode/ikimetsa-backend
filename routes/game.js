@@ -113,7 +113,7 @@ router.post('/start-game', async (req, res) => {
 // (liikkumiseen vai suoraan taisteluun) vaikka hän kirjautuisi välissä ulos.
 // Palkitaan samalla pieni XP siitä että pelaaja selvisi liikkumisosuuden läpi asti taisteluun -
 // vain kerran per kohtaaminen (hasEnteredCombat-suoja estää tuplapalkinnon).
-const MOVEMENT_XP_REWARD = 10;
+const MOVEMENT_XP_REWARD = 50;
 
 router.post('/enter-combat', async (req, res) => {
   try {
