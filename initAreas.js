@@ -77,22 +77,22 @@ export const seedAreas = async () => {
           'Jyrkkä rantatörmä pettää jalkojesi alla.'
         ]
       },
-      {
+     {
         order: 4,
         name: 'Järvi',
         locationLabel: 'SIJAINTI: JÄRVI',
         monsterName: 'Suomuinen Järvikäärme',
         backgroundClass: 'traveling-background-jarvi',
-        encounterText: 'Järven pinta halkeaa äänettömästi. Suomuinen selkä kaartuu esiin pimeästä vedestä...',
+        encounterText: 'Vesi kuohahtaa lautan alla. Jokin suomuinen nousee pinnalle aivan vieressäsi...',
         goodRollTexts: [
-          'Kuljet rantaviivaa pitkin, järvi tyynenä vierelläsi.',
-          'Kalat pakenevat rannan tuntumasta - jokin suurempi on liikkeellä syvyyksissä.',
-          'Usva järven yllä peittää näkyvyyden, mutta polku pysyy jaloissasi.'
+          'Soudat tasaisin vedoin, lautta liukuu tyynesti veden pinnalla.',
+          'Airo uppoaa veteen äänettömästi, matka etenee vakaasti kohti toista rantaa.',
+          'Löydät hyvän rytmin soutuun, ranta jää kauas taaksesi.'
         ],
         badRollTexts: [
-          'Rantahiekka pettää ja vajoat nilkkaa myöten kylmään veteen.',
-          'Terävät kivet rannalla viiltävät saappaisiisi.',
-          'Tuuli järven yli tuo mukanaan läpitunkevan kylmyyden.'
+          'Airo luiskahtaa käsistäsi hetkeksi, lautta kieppuu paikallaan.',
+          'Aalto keikauttaa lauttaa ja kastut viileällä vedellä.',
+          'Väsyneet käsivartesi tekevät soutamisesta raskasta ja hidasta.'
         ]
       },
       {
