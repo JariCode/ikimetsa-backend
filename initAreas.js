@@ -64,6 +64,7 @@ export const seedAreas = async () => {
         name: 'Koski',
         locationLabel: 'SIJAINTI: KOSKI',
         monsterName: 'Koskenkuristaja',
+        backgroundClass: 'traveling-background-koski',
         encounterText: 'Vesi kuohahtaa väkivaltaisesti kosken partaalla. Jokin valtava nousee virrasta...',
         goodRollTexts: [
           'Ylität liukkaat kivet kosken partaalla varmoin askelin.',
@@ -81,6 +82,7 @@ export const seedAreas = async () => {
         name: 'Järvi',
         locationLabel: 'SIJAINTI: JÄRVI',
         monsterName: 'Suomuinen Järvikäärme',
+        backgroundClass: 'traveling-background-jarvi',
         encounterText: 'Järven pinta halkeaa äänettömästi. Suomuinen selkä kaartuu esiin pimeästä vedestä...',
         goodRollTexts: [
           'Kuljet rantaviivaa pitkin, järvi tyynenä vierelläsi.',
@@ -98,6 +100,7 @@ export const seedAreas = async () => {
         name: 'Luolasto',
         locationLabel: 'SIJAINTI: LUOLASTO',
         monsterName: 'Luolapeikko',
+        backgroundClass: 'traveling-background-luolasto',
         encounterText: 'Pimeydestä kuuluu raskaita askeleita. Jotain massiivista liikkuu luolan syvyyksissä...',
         goodRollTexts: [
           'Etenet luolaston kapeaa käytävää pitkin soihtusi valossa.',
@@ -115,6 +118,7 @@ export const seedAreas = async () => {
         name: 'Luolasto (syvemmällä)',
         locationLabel: 'SIJAINTI: LUOLASTON SYVYYS',
         monsterName: 'Jättiläishämähäkki',
+        backgroundClass: 'traveling-background-luolasto',
         encounterText: 'Verkkoja roikkuu joka puolella. Kahdeksan silmää tuikkii pimeydessä edessäsi...',
         goodRollTexts: [
           'Väistät hämähäkinseittejä varovasti edetessäsi syvemmälle.',
@@ -132,6 +136,7 @@ export const seedAreas = async () => {
         name: 'Syvä metsä',
         locationLabel: 'SIJAINTI: SYVÄ METSÄ',
         monsterName: 'Metsäjättiläinen',
+        backgroundClass: 'traveling-background-metsa',
         encounterText: 'Maa jyrisee jokaisesta askeleesta. Puiden latvat väistyvät jonkin valtavan tieltä...',
         goodRollTexts: [
           'Vanhat puut kaartuvat yllesi kuin holvikatto, ja polku on tasainen.',
@@ -149,6 +154,7 @@ export const seedAreas = async () => {
         name: 'Hautausmaa',
         locationLabel: 'SIJAINTI: HAUTAUSMAA',
         monsterName: 'Rypevä Zombie',
+        backgroundClass: 'traveling-background-hautausmaa',
         encounterText: 'Multa alkaa liikkua lähimmän hautakiven juurella. Mätänevä käsi puskee pintaan...',
         goodRollTexts: [
           'Kuljet vanhojen hautakivien lomassa, nimet niissä jo kuluneet pois.',
@@ -166,6 +172,7 @@ export const seedAreas = async () => {
         name: 'Synkkä sydänmetsä',
         locationLabel: 'SIJAINTI: SYNKKÄ SYDÄNMETSÄ',
         monsterName: 'Ihmissusi',
+        backgroundClass: 'traveling-background-sydänmetsä',
         encounterText: 'Ulvonta kaikuu aivan liian läheltä. Oksat ratisevat kun jokin juoksee kohti sinua...',
         goodRollTexts: [
           'Kuunvalo tuskin läpäisee tiheää lehvästöä, mutta polku pitää.',
@@ -183,6 +190,7 @@ export const seedAreas = async () => {
         name: 'Ränsistynyt mökki',
         locationLabel: 'SIJAINTI: RÄNSISTYNYT MÖKKI',
         monsterName: 'Kirottujen Velho',
+        backgroundClass: 'traveling-background-mökki',
         encounterText: 'Mökin ovi avautuu itsestään. Kylmä, violetti valo virtaa ulos pimeydestä...',
         goodRollTexts: [
           'Lähestyt ränsistynyttä mökkiä varovasti, lattialaudat eivät vielä narahda.',
