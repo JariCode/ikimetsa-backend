@@ -60,7 +60,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Suomuinen Järvikäärme', 
         hp: '50', 
-        defense: '13', 
+        defense: '14', 
         attackBonus: '3', 
         damageMax: '13', 
         xpReward: '150',
@@ -70,7 +70,7 @@ export const seedMonsters = async () => {
       // 5. Alue: Luolasto (Vastus 1)
       { 
         name: 'Luolapeikko', 
-        hp: '60', 
+        hp: '70', 
         defense: '11', 
         attackBonus: '4', 
         damageMax: '18', 
