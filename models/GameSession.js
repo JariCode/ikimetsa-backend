@@ -36,6 +36,7 @@ const gameSessionSchema = new mongoose.Schema({
   companionName: { type: String, default: null },
   companionHp: { type: Number, default: 30 },
   companionMaxHp: { type: Number, default: 30 },
+  companionDefense: { type: Number, default: 9 }, // 🛡️ Skaalautuu pelaajan tason mukana - katso getCompanionStatsForLevel
   companionWeaponName: { type: String, default: null },
   companionWeaponDurability: { type: Number, default: 8 },
   companionWeaponMaxDurability: { type: Number, default: 8 },

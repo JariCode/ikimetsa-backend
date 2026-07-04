@@ -30,7 +30,7 @@ export const seedMonsters = async () => {
         defense: '10', 
         attackBonus: '2', 
         damageMax: '8', 
-        xpReward: '50',
+        xpReward: '75',
         cssClass: 'varjohahmo',
         level: '1' // 👈 Hirviön taso lisätty!
       },
@@ -41,7 +41,7 @@ export const seedMonsters = async () => {
         defense: '8', 
         attackBonus: '1', 
         damageMax: '10', 
-        xpReward: '70',
+        xpReward: '100',
         cssClass: 'suolieju',
         level: '2' // 👈 Hirviön taso lisätty!
       },
@@ -52,7 +52,7 @@ export const seedMonsters = async () => {
         defense: '12', 
         attackBonus: '3', 
         damageMax: '12', 
-        xpReward: '100',
+        xpReward: '150',
         cssClass: 'koskenkuristaja',
         level: '3' // 👈 Hirviön taso lisätty!
       },
@@ -63,18 +63,18 @@ export const seedMonsters = async () => {
         defense: '14', 
         attackBonus: '3', 
         damageMax: '13', 
-        xpReward: '150',
+        xpReward: '250',
         cssClass: 'jarvikaarme',
         level: '4'
       },
       // 5. Alue: Luolasto (Vastus 1)
       { 
         name: 'Luolapeikko', 
-        hp: '70', 
+        hp: '65', 
         defense: '11', 
         attackBonus: '4', 
-        damageMax: '18', 
-        xpReward: '170',
+        damageMax: '15', 
+        xpReward: '350',
         cssClass: 'luolapeikko',
         level: '5'
       },
@@ -85,7 +85,7 @@ export const seedMonsters = async () => {
         defense: '15', 
         attackBonus: '5', 
         damageMax: '15', 
-        xpReward: '200',
+        xpReward: '500',
         cssClass: 'hamahakki',
         level: '6'
       },
@@ -96,7 +96,7 @@ export const seedMonsters = async () => {
         defense: '10', 
         attackBonus: '5', 
         damageMax: '22', 
-        xpReward: '280',
+        xpReward: '750',
         cssClass: 'metsajattilainen',
         level: '7'
       },
@@ -107,7 +107,7 @@ export const seedMonsters = async () => {
         defense: '8', 
         attackBonus: '4', 
         damageMax: '16', 
-        xpReward: '320',
+        xpReward: '900',
         cssClass: 'zombie',
         level: '8'
       },
@@ -118,7 +118,7 @@ export const seedMonsters = async () => {
         defense: '13', 
         attackBonus: '7', 
         damageMax: '20', 
-        xpReward: '400',
+        xpReward: '1050',
         cssClass: 'ihmissusi',
         level: '9'
       },
@@ -129,7 +129,7 @@ export const seedMonsters = async () => {
         defense: '16', 
         attackBonus: '9', 
         damageMax: '26', 
-        xpReward: '800',
+        xpReward: '1200',
         cssClass: 'velho',
         level: '10'
       }

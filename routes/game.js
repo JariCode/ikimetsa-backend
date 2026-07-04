@@ -13,6 +13,17 @@ if (!JWT_SECRET) {
 }
 const TOTAL_AREAS = 10;
 
+// 🛡️ Kumppanin HP ja puolustus skaalautuvat pelaajan tason mukana - sama periaate
+// kuin pelaajan omassa HP-kasvussa (+10/taso), jotta kumppani pysyy hyödyllisenä
+// eikä kuole joka taistelussa myöhemmillä, vaikeammilla alueilla.
+const getCompanionStatsForLevel = (level) => {
+  const lvl = parseInt(level) || 1;
+  return {
+    maxHp: 30 + (lvl - 1) * 10,
+    defense: 9 + (lvl - 1)
+  };
+};
+
 // 🗺️ Hakee session.currentAreaIndex:tä vastaavan Area-dokumentin ja liittää sen
 // vastaukseen "currentArea"-kenttänä.
 const attachAreaToSession = async (session) => {
@@ -132,7 +143,10 @@ router.post('/find-companion', async (req, res) => {
     session.companionFound = true;
     session.companionActive = true;
     session.companionName = currentArea.companionEvent.name;
-    session.companionHp = session.companionMaxHp || 30;
+    const foundStats = getCompanionStatsForLevel(session.stats.level);
+    session.companionMaxHp = foundStats.maxHp;
+    session.companionDefense = foundStats.defense;
+    session.companionHp = foundStats.maxHp;
     session.companionWeaponName = currentArea.companionEvent.weaponName || 'Vanha ase';
     session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
     session.combatLogs = [...(session.combatLogs || []), `🧑‍🤝‍🧑 ${currentArea.companionEvent.name} liittyy seuraasi.`];
@@ -294,8 +308,11 @@ router.post('/respawn', async (req, res) => {
     let respawnMessage = `🔥 Heräät nuotion äärestä. Taipaleesi jatkuu tasolta ${checkpoint.level} (${checkpoint.xp} XP).`;
     if (session.companionFound) {
       const wasDown = !session.companionActive;
+      const stats = getCompanionStatsForLevel(session.stats.level);
       session.companionActive = true;
-      session.companionHp = session.companionMaxHp || 30;
+      session.companionMaxHp = stats.maxHp;
+      session.companionDefense = stats.defense;
+      session.companionHp = stats.maxHp;
       session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
       if (wasDown) {
         respawnMessage += ` ${session.companionName} herää myös vierestäsi, haavat parantuneina.`;
@@ -388,8 +405,11 @@ router.post('/continue-journey', async (req, res) => {
     // 🧑‍🤝‍🧑 Kumppani paranee täyteen kuntoon nuotiolla ja palaa mukaan jos oli kaatunut
     if (session.companionFound) {
       const wasDown = !session.companionActive;
+      const stats = getCompanionStatsForLevel(session.stats.level);
       session.companionActive = true;
-      session.companionHp = session.companionMaxHp || 30;
+      session.companionMaxHp = stats.maxHp;
+      session.companionDefense = stats.defense;
+      session.companionHp = stats.maxHp;
       session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
       session.combatLogs = wasDown
         ? [`${session.companionName} toipuu nuotion ääressä ja liittyy taas rinnallesi.`]

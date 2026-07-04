@@ -96,7 +96,7 @@ router.post('/turn', async (req, res) => {
             const attackRoll = rawAttackRoll + playerAttackBonus;
             displayRoll = rawAttackRoll;
             if (attackRoll >= monster.defense) {
-              playerDamageDealt = rollDice(2, 8);
+              playerDamageDealt = rollDice(1, 8) + rollDice(1, 8);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
               combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
 
@@ -145,7 +145,7 @@ router.post('/turn', async (req, res) => {
           const targetsCompanion = session.companionActive && (session.companionHp || 0) > 0 && Math.random() < 0.5;
 
           if (targetsCompanion) {
-            const companionDefense = 9;
+            const companionDefense = parseInt(session.companionDefense) || 9;
             if (monsterAttackRoll >= companionDefense) {
               const companionDamageTaken = rollDice(1, monster.damageMax);
               const newCompanionHp = Math.max(0, (session.companionHp || 0) - companionDamageTaken);
