@@ -318,7 +318,7 @@ router.post('/respawn', async (req, res) => {
         respawnMessage += ` ${session.companionName} herää myös vierestäsi, haavat parantuneina.`;
       }
     }
-    session.combatLogs = [respawnMessage];
+    session.combatLogs = [...(session.combatLogs || []), respawnMessage];
 
     session.markModified('stats');
     session.markModified('inventory');
@@ -411,11 +411,9 @@ router.post('/continue-journey', async (req, res) => {
       session.companionDefense = stats.defense;
       session.companionHp = stats.maxHp;
       session.companionWeaponDurability = session.companionWeaponMaxDurability || 8;
-      session.combatLogs = wasDown
-        ? [`${session.companionName} toipuu nuotion ääressä ja liittyy taas rinnallesi.`]
-        : [];
-    } else {
-      session.combatLogs = [];
+      if (wasDown) {
+        session.combatLogs = [...(session.combatLogs || []), `${session.companionName} toipuu nuotion ääressä ja liittyy taas rinnallesi.`];
+      }
     }
 
     session.checkpoint = {
