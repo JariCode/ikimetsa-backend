@@ -89,9 +89,7 @@ router.post('/turn', async (req, res) => {
           if (weapon && weapon.durability <= 0) {
             combatLogEntries.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi hyökätä tehokkaasti.`);
           } else {
-            // 🎯 Tasosta kasvava hyökkäysbonus - ilman tätä pelaajan osumatarkkuus ei koskaan
-            // parantunut tasonnousuista huolimatta, jolloin myöhemmät alueet (isompi defense)
-            // muuttuivat käytännössä voittamattomiksi. +1 per taso.
+            // 🎯 Tasosta kasvava hyökkäysbonus
             const playerLevel = parseInt(session.stats.level) || 1;
             const playerAttackBonus = playerLevel;
             const rawAttackRoll = rollDice(1, 20);
@@ -167,8 +165,7 @@ router.post('/turn', async (req, res) => {
         session.stats.level = currentLevel;
         session.stats.maxHp = currentMaxHp;
 
-        // 🔥 NUOTIO: pelaaja lepää voiton jälkeen - täysi kunto ja korjattu ase heti,
-        // ei vasta kun matkaa jatketaan. Tämä hetki tallennetaan myös tallennuspisteeksi.
+        // 🔥 NUOTIO: pelaaja lepää voiton jälkeen
         session.stats.hp = currentMaxHp;
         if (session.inventory[0]) {
           session.inventory[0].durability = session.inventory[0].maxDurability;
@@ -187,6 +184,42 @@ router.post('/turn', async (req, res) => {
         session.currentMonsterHp = 0;
         session.combatInitiative = null;
         session.currentTurn = null;
+
+        // 👑 OIKOPOLKU LOPPURUUTUUN: Jos ollaan alueella 10 (Velho), peli päättyy välittömästi!
+        const currentAreaIndex = parseInt(session.currentAreaIndex) || 1;
+        if (currentAreaIndex >= 10) {
+          session.isGameCompleted = true; // Lukitaan tietokantaan
+          session.hasEnteredCombat = false; // Poistutaan taistelutilasta taustalla
+          
+          combatLogEntries.push(`🏆 IKIMETSÄ ON VAPAA! Kirottujen Velho on lyöty lopullisesti!`);
+          session.combatLogs = [...(session.combatLogs || []), ...combatLogEntries];
+          
+          await session.save();
+
+          const newLog = new Log({
+            action: 'GAME_COMPLETED',
+            details: `Pelaaja läpäisi pelin onnistuneesti suoraan taistelusta!`,
+            performedBy: userId
+          });
+          await newLog.save();
+
+          // Palautetaan heti JSON-vastaus ja katkaistaan suoritus, jottei alempi oletus-res.json laukea
+          return res.json({
+            combatLogs: session.combatLogs,
+            newLogs: combatLogEntries,
+            playerHp: session.stats.hp,
+            playerMaxHp: session.stats.maxHp,
+            playerLevel: session.stats.level,
+            playerXp: session.stats.xp,
+            weaponDurability: session.inventory[0]?.durability || 0,
+            monsterHp: 0,
+            repairPoints: session.repairPoints,
+            initiativeWinner: null,
+            nextTurn: null,
+            diceRoll: displayRoll,
+            isGameCompleted: true // 🔥 Lähetetään frontille käsky siirtyä VictoryScreeniin!
+          });
+        }
       } else {
         session.currentMonsterHp = monster.hp;
       }
@@ -207,7 +240,7 @@ router.post('/turn', async (req, res) => {
     // Palautetaan kaikki dynaamiset progression arvot JSON-vastauksessa frontendille lennosta
     res.json({
       combatLogs: session.combatLogs,
-      newLogs: combatLogEntries, // 🌟 Vain tämän vuoron uudet rivit - frontend ei enää arvaile montako riviä on uusia
+      newLogs: combatLogEntries,
       playerHp: session.stats.hp,
       playerMaxHp: session.stats.maxHp,
       playerLevel: session.stats.level,

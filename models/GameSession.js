@@ -26,11 +26,13 @@ const gameSessionSchema = new mongoose.Schema({
   combatInitiative: { type: String, default: null },
   currentTurn: { type: String, default: null },
   repairPoints: { type: Number, default: 0 },
-  hasEnteredCombat: { type: Boolean, default: false }, // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa (ratkaisee "Jatka taivalta" -kohteen oikein uloskirjautumisen jälkeenkin)
+  hasEnteredCombat: { type: Boolean, default: false }, // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa
   currentAreaIndex: { type: Number, default: 1 }, // 🗺️ Mikä 10 alueesta on käynnissä (viittaa Area.order-kenttään). Kuolema EI muuta tätä.
+  
+  // 🔥 LISÄTTY: Kertoo onko Velho lyöty ja peli pelattu onnistuneesti läpi!
+  isGameCompleted: { type: Boolean, default: false },
+
   // 🔥 TALLENNUSPISTE (nuotio): viimeisin hetki jolloin pelaaja lepäsi hirviön kaatamisen jälkeen.
-  // Jos hahmo kuolee taistelussa, peli palautetaan näihin arvoihin - ei nollaan, mutta ei myöskään
-  // mihinkään sen jälkeen kertyneeseen. Asetetaan alkuun pelin alussa ja päivitetään joka voiton jälkeen.
   checkpoint: {
     xp: { type: Number, default: 0 },
     level: { type: Number, default: 1 },

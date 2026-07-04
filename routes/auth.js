@@ -12,11 +12,10 @@ if (!JWT_SECRET) {
 }
 const TOTAL_AREAS = 10;
 
-// 🗺️ Sama alue-liitäntähelpperi kuin game.js:ssä - liittää session.currentAreaIndex:tä
-// vastaavan Area-dokumentin mukaan "currentArea"-kenttänä, jos pelisessio on olemassa.
+// 🗺️ Alue-liitäntähelpperi
 const attachAreaIfSession = async (session) => {
   if (!session) return null;
-  const areaOrder = Math.min(session.currentAreaIndex || 1, TOTAL_AREAS);
+  const areaOrder = Math.min(parseInt(session.currentAreaIndex) || 1, TOTAL_AREAS);
   const area = await Area.findOne({ order: areaOrder });
   const sessionObject = session.toObject ? session.toObject() : session;
   return { ...sessionObject, currentArea: area || null };
@@ -31,17 +30,10 @@ const cookieOptions = {
 };
 
 // --- KÄYTTÄJÄTUNNUKSEN JA SALASANAN VALIDOINTISÄÄNNÖT ---
-
-// Käyttäjätunnus: 3-30 merkkiä, vain kirjaimet, numerot, alaviiva ja väliviiva sallittu
 const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
-
-// Salasanan vähimmäispituus
 const PASSWORD_MIN_LENGTH = 8;
-
-// Merkit joita ei koskaan sallita käyttäjätunnuksessa tai salasanassa (estää mm. XSS- ja komentoinjektioyrityksiä)
 const FORBIDDEN_CHARS_REGEX = /[<>$;`\\|]/;
 
-// Palauttaa virhetekstin jos käyttäjätunnus ei kelpaa, muuten null
 function validateUsername(username) {
   if (typeof username !== 'string' || username.trim().length === 0) {
     return 'Käyttäjätunnus vaaditaan';
@@ -55,7 +47,6 @@ function validateUsername(username) {
   return null;
 }
 
-// Palauttaa virhetekstin jos salasana ei kelpaa, muuten null
 function validatePassword(password) {
   if (typeof password !== 'string' || password.length === 0) {
     return 'Salasana vaaditaan';
@@ -69,7 +60,6 @@ function validatePassword(password) {
   return null;
 }
 
-// Lukee ja tarkistaa JWT-tokenin evästeestä, palauttaa käyttäjän id:n tai null jos ei kirjautunut
 function getUserIdFromRequest(req) {
   const token = req.cookies.token;
   if (!token) return null;
@@ -90,16 +80,11 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Käyttäjänimi ja salasana vaaditaan' });
     }
 
-    // Käyttäjätunnuksen ja salasanan muotovalidointi ennen tietokantaan koskemista
     const usernameError = validateUsername(username);
-    if (usernameError) {
-      return res.status(400).json({ message: usernameError });
-    }
+    if (usernameError) return res.status(400).json({ message: usernameError });
 
     const passwordError = validatePassword(password);
-    if (passwordError) {
-      return res.status(400).json({ message: passwordError });
-    }
+    if (passwordError) return res.status(400).json({ message: passwordError });
 
     const existingUser = await User.findOne({ username });
     if (existingUser) {
@@ -122,7 +107,6 @@ router.post('/register', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    // Kirjoitetaan JWT evästeeseen
     res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
@@ -163,7 +147,6 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    // Kirjoitetaan JWT evästeeseen
     res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
@@ -179,7 +162,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       username: user.username,
-      gameSessionId: session ? session._id : null, // Tämä ohjataan sessionStorageen
+      gameSessionId: session ? session._id : null,
       session: sessionWithArea
     });
   } catch (error) {
@@ -187,17 +170,16 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ISTUNNON TARKISTUS SIVUN PÄIVITYKSESSÄ (Luetaan evästeistä)
+// ISTUNNON TARKISTUS SIVUN PÄIVITYKSESSÄ
 router.get('/me', async (req, res) => {
   try {
-    const token = req.cookies.token; // 🍪 Luetaan suoraan OnlyCookies-rakenteesta
+    const token = req.cookies.token;
     if (!token) {
       return res.status(401).json({ message: 'Ei tokenia' });
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // 🌟 LISÄTTY: Haetaan käyttäjätunnus, jotta profiilinäkymä tietää sen myös sivun päivityksen jälkeen
     const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(401).json({ message: 'Käyttäjää ei löytynyt' });
@@ -218,13 +200,38 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// ULOSKIRJAUTUMINEN (Tyhjennetään eväste kokonaan)
-router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+// 🔥 ULOSKIRJAUTUMINEN: Nollaa automaattisesti tietokannasta, jos peli oli suoritettu loppuun
+router.post('/logout', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const userId = decoded.id;
+
+      const GameSession = (await import('../models/GameSession.js')).default;
+      const session = await GameSession.findOne({ userId });
+      
+      // Jos peli on suoritettu läpi, tuhotaan pelitallennus taustalla
+      if (session && session.isGameCompleted) {
+        await GameSession.findOneAndDelete({ userId });
+        
+        const newLog = new Log({
+          action: 'GAME_RESET_ON_LOGOUT',
+          details: `Pelaajan voitettu peli nollattiin automaattisesti uloskirjautumisen yhteydessä.`,
+          performedBy: userId
+        });
+        await newLog.save();
+      }
+    }
+  } catch (e) {
+    console.error("Virhe istunnon nollauksessa uloskirjautuessa:", e);
+  }
+
+  res.clearCookie('token', cookieOptions);
   res.json({ message: 'Kirjauduttu ulos ja evästeet pyyhitty' });
 });
 
-// KÄYTTÄJÄTUNNUKSEN VAIHTO (vaatii nykyisen salasanan vahvistukseksi)
+// KÄYTTÄJÄTUNNUKSEN VAIHTO
 router.patch('/username', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -235,9 +242,7 @@ router.patch('/username', async (req, res) => {
     const { newUsername, currentPassword } = req.body;
 
     const usernameError = validateUsername(newUsername);
-    if (usernameError) {
-      return res.status(400).json({ message: usernameError });
-    }
+    if (usernameError) return res.status(400).json({ message: usernameError });
 
     if (!currentPassword) {
       return res.status(400).json({ message: 'Nykyinen salasana vaaditaan vahvistukseksi' });
@@ -275,7 +280,7 @@ router.patch('/username', async (req, res) => {
   }
 });
 
-// SALASANAN VAIHTO (vaatii nykyisen salasanan)
+// SALASANAN VAIHTO
 router.patch('/password', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -290,9 +295,7 @@ router.patch('/password', async (req, res) => {
     }
 
     const passwordError = validatePassword(newPassword);
-    if (passwordError) {
-      return res.status(400).json({ message: passwordError });
-    }
+    if (passwordError) return res.status(400).json({ message: passwordError });
 
     const user = await User.findById(userId);
     if (!user) {
@@ -321,7 +324,7 @@ router.patch('/password', async (req, res) => {
   }
 });
 
-// OMAN TILIN POISTO (poistaa myös kaikki pelitiedot pysyvästi)
+// OMAN TILIN POISTO
 router.delete('/account', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -347,7 +350,6 @@ router.delete('/account', async (req, res) => {
 
     const deletedUsername = user.username;
 
-    // Poistetaan pelitiedot ennen käyttäjän poistoa
     const GameSession = (await import('../models/GameSession.js')).default;
     await GameSession.deleteOne({ userId: user._id });
     await User.deleteOne({ _id: user._id });
@@ -359,7 +361,7 @@ router.delete('/account', async (req, res) => {
     });
     await newLog.save();
 
-    res.clearCookie('token');
+    res.clearCookie('token', cookieOptions);
     res.json({ message: 'Tili ja pelitiedot poistettu' });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe tilin poistossa', error: error.message });
