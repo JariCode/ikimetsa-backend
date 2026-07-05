@@ -123,7 +123,7 @@ export const seedAreas = async () => {
       companionEvent: {
         name: 'Aarne',
         // 🔥 TÄMÄ RIVI TÄYSIN YHDELLE RIVILLE ILMAN KONEEN ENTERIÄ:
-        discoveryText: 'Soihtusi valo osuu paksuun hämähäkinseittiin kallion kolossa.\nSen sisällä tuskin hengittää sidottu hahmo - eksynyt vaeltaja, kokonaan seitin peitossa mutta yhä elossa.',
+        discoveryText: 'Soihtusi valo osuu paksuun hämähäkinseittiin kallion kolossa.\nSen sisällä tuskin hengittää sidottu hahmo. \nEksynyt vaeltaja, kokonaan seitin peitossa mutta yhä elossa.',
         weaponName: 'Ruosteinen tikari'
       },
         goodRollTexts: [

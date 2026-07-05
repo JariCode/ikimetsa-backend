@@ -96,7 +96,6 @@ router.post('/turn', async (req, res) => {
             const attackRoll = rawAttackRoll + playerAttackBonus;
             displayRoll = rawAttackRoll;
             if (attackRoll >= monster.defense) {
-              // ⚔️ Lisätty weaponDamageBonus - kasvaa jos alueen 8 aseen löytötapahtuma on koettu
               playerDamageDealt = rollDice(1, 8) + rollDice(1, 8) + (parseInt(session.weaponDamageBonus) || 0);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
               combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
@@ -151,25 +150,25 @@ router.post('/turn', async (req, res) => {
               const companionDamageTaken = rollDice(1, monster.damageMax);
               const newCompanionHp = Math.max(0, (session.companionHp || 0) - companionDamageTaken);
               session.companionHp = newCompanionHp;
-              combatLogEntries.push(`💥 ${monster.name} iskee ${session.companionName}:a kohti! (Heitti ${monsterAttackRoll}) ja osuu! ${session.companionName} menettää ${companionDamageTaken} HP.`);
+              combatLogEntries.push(`💥 ${monster.name} iskee ${session.companionName}:a kohti! (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja osuu! ${session.companionName} menettää ${companionDamageTaken} HP.`);
 
               if (newCompanionHp <= 0) {
                 session.companionActive = false;
                 combatLogEntries.push(`💫 ${session.companionName} kaatuu taistelukyvyttömäksi. Hän ei kuole, mutta ei voi enää taistella ennen kuin toipuu nuotion ääressä.`);
               }
             } else {
-              combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä ${session.companionName}:a (Heitti ${monsterAttackRoll}) mutta osuu ohi.`);
+              combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä ${session.companionName}:a (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) mutta osuu ohi.`);
             }
           } else if (monsterAttackRoll >= playerDefense) {
             monsterDamageDealt = rollDice(1, monster.damageMax);
             currentPlayerHp = Math.max(0, currentPlayerHp - monsterDamageDealt);
-            combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti ${monsterAttackRoll}) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
+            combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
 
             if (currentPlayerHp <= 0) {
               combatLogEntries.push(`💀 Sait kuolettavan iskun ja vaivut pimeyteen...`);
             }
           } else {
-            combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä (Heitti ${monsterAttackRoll}) ja raapaisi ohi vaatteidesi.`);
+            combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja raapaisi ohi vaatteidesi.`);
           }
           nextTurn = 'pelaaja';
           session.currentTurn = nextTurn;
