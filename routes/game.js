@@ -168,6 +168,64 @@ router.post('/find-companion', async (req, res) => {
   }
 });
 
+// ⚔️ Paremman aseen löytäminen - kutsutaan kun pelaaja heittää ensimmäisen kuutosen
+// alueella jolla on weaponEvent eikä asetta ole vielä löydetty. Ei vie taisteluun,
+// vaan näyttää löytöruudun ja palauttaa pelaajan takaisin samalle liikkumisruudulle.
+router.post('/find-weapon', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    if (session.weaponFound) {
+      return res.status(400).json({ message: 'Parempi ase on jo löydetty.' });
+    }
+
+    const currentArea = await Area.findOne({ order: parseInt(session.currentAreaIndex) || 1 });
+    if (!currentArea || !currentArea.weaponEvent || !currentArea.weaponEvent.discoveryText) {
+      return res.status(400).json({ message: 'Tällä alueella ei ole asetapahtumaa.' });
+    }
+
+    const newWeaponName = session.characterType === 'Metsästäjä'
+      ? currentArea.weaponEvent.hunterWeaponName
+      : currentArea.weaponEvent.mechanicWeaponName;
+
+    session.weaponFound = true;
+    session.weaponDamageBonus = currentArea.weaponEvent.damageBonus || 0;
+
+    if (session.inventory[0]) {
+      session.inventory[0].name = newWeaponName || session.inventory[0].name;
+      // 🛠️ Sama kestävyys kuin vanhalla aseella - korjataan täyteen kuntoon vaihdon yhteydessä
+      session.inventory[0].durability = session.inventory[0].maxDurability;
+    }
+
+    session.combatLogs = [...(session.combatLogs || []), `⚔️ Löysit uuden aseen: ${newWeaponName}!`];
+
+    session.markModified('inventory');
+    session.markModified('combatLogs');
+    await session.save();
+
+    const newLog = new Log({
+      action: 'WEAPON_FOUND',
+      details: `Pelaaja löysi paremman aseen: ${newWeaponName}`,
+      performedBy: userId
+    });
+    await newLog.save();
+
+    const responseBody = await attachAreaToSession(session);
+    res.json(responseBody);
+  } catch (error) {
+    res.status(500).json({ message: 'Aseen löytäminen epäonnistui', error: error.message });
+  }
+});
+
 // 📝 Tallentaa yksittäisen lokirivin, jota ei muuten tallennettaisi minnekään -
 // käytetään liikkumisruudun nopanheittoteksteille ja vastaavalle selainpuolen
 // tekstille joka ei muuten koskaan kulkisi palvelimen kautta.

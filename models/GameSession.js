@@ -29,6 +29,10 @@ const gameSessionSchema = new mongoose.Schema({
   hasEnteredCombat: { type: Boolean, default: false }, // 🌟 Kertoo palvelimella onko pelaaja jo astunut taisteluun tässä kohtaamisessa
   currentAreaIndex: { type: Number, default: 1 }, // 🗺️ Mikä 10 alueesta on käynnissä (viittaa Area.order-kenttään). Kuolema EI muuta tätä.
 
+  // ⚔️ Parempi ase löytyy kerran (alue 8) - korvaa pysyvästi alkuperäisen aseen
+  weaponFound: { type: Boolean, default: false },
+  weaponDamageBonus: { type: Number, default: 0 },
+
   // 🧑‍🤝‍🧑 Matkakumppani - löytyy kerran (companionFound estää löytöruudun toistumisen),
   // ja kun aktiivinen, osallistuu jokaiseen taisteluun pelaajan hyökkäysvuoron yhteydessä.
   companionFound: { type: Boolean, default: false },

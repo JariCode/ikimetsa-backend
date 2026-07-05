@@ -96,7 +96,8 @@ router.post('/turn', async (req, res) => {
             const attackRoll = rawAttackRoll + playerAttackBonus;
             displayRoll = rawAttackRoll;
             if (attackRoll >= monster.defense) {
-              playerDamageDealt = rollDice(1, 8) + rollDice(1, 8);
+              // ⚔️ Lisätty weaponDamageBonus - kasvaa jos alueen 8 aseen löytötapahtuma on koettu
+              playerDamageDealt = rollDice(1, 8) + rollDice(1, 8) + (parseInt(session.weaponDamageBonus) || 0);
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
               combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
 

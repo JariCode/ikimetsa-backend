@@ -19,6 +19,14 @@ const areaSchema = new mongoose.Schema({
     discoveryText: { type: String, default: null },
     weaponName: { type: String, default: null }
   },
+  // ⚔️ Aseen löytötapahtuma - sama periaate kuin companionEvent, mutta aselöytö
+  // riippuu hahmoluokasta (Metsästäjä vs Mekaanikko saavat eri aseen).
+  weaponEvent: {
+    discoveryText: { type: String, default: null },
+    hunterWeaponName: { type: String, default: null },
+    mechanicWeaponName: { type: String, default: null },
+    damageBonus: { type: Number, default: 0 }
+  },
   goodRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 3-5
   badRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 1-2
   mechanic: { type: String, default: 'normal' } // 'normal' | 'swamp_sink' jne - laajennettavissa myöhemmin

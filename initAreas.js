@@ -162,6 +162,12 @@ export const seedAreas = async () => {
         monsterName: 'Rypevä Zombie',
         backgroundClass: 'traveling-background-hautausmaa',
         encounterText: 'Multa alkaa liikkua lähimmän hautakiven juurella. Mätänevä käsi puskee pintaan...',
+        weaponEvent: {
+          discoveryText: 'Puoliksi mullan peittämä esine kimaltaa vanhan hautakiven juurella. Kaivat sen esiin varovasti.',
+          hunterWeaponName: 'Machete',
+          mechanicWeaponName: 'Sorkkarauta',
+          damageBonus: 5
+        },
         goodRollTexts: [
           'Kuljet vanhojen hautakivien lomassa, nimet niissä jo kuluneet pois.',
           'Hiljaisuus hautausmaalla on painostava, mutta mitään ei liiku.',
