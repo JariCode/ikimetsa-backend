@@ -30,7 +30,7 @@ export const seedMonsters = async () => {
         defense: '10', 
         attackBonus: '1', 
         damageMax: '9', 
-        xpReward: '75',
+        xpReward: '85',
         cssClass: 'varjohahmo',
         level: '1' // 👈 Hirviön taso lisätty!
       },
@@ -48,7 +48,7 @@ export const seedMonsters = async () => {
       // 3. Alue: Koski
       { 
         name: 'Koskenkuristaja', 
-        hp: '90', 
+        hp: '85', 
         defense: '9', 
         attackBonus: '3', 
         damageMax: '12', 
@@ -59,7 +59,7 @@ export const seedMonsters = async () => {
       // 4. Alue: Järvi
       { 
         name: 'Suomuinen Järvikäärme', 
-        hp: '95', 
+        hp: '90', 
         defense: '9', 
         attackBonus: '3', 
         damageMax: '13', 
@@ -70,7 +70,7 @@ export const seedMonsters = async () => {
       // 5. Alue: Luolasto (Vastus 1)
       { 
         name: 'Luolapeikko', 
-        hp: '100', 
+        hp: '110', 
         defense: '9', 
         attackBonus: '4', 
         damageMax: '15', 
@@ -81,7 +81,7 @@ export const seedMonsters = async () => {
       // 5. Alue: Luolasto (Vastus 2)
       { 
         name: 'Jättiläishämähäkki', 
-        hp: '135', 
+        hp: '155', 
         defense: '10', 
         attackBonus: '6', 
         damageMax: '17', 
@@ -92,7 +92,7 @@ export const seedMonsters = async () => {
       // 6. Alue: Syvä metsä
       { 
         name: 'Metsäjättiläinen', 
-        hp: '160', 
+        hp: '170', 
         defense: '8', 
         attackBonus: '9', 
         damageMax: '22', 
@@ -103,30 +103,30 @@ export const seedMonsters = async () => {
       // 7. Alue: Hautausmaa
       { 
         name: 'Rypevä Zombie', 
-        hp: '180', 
+        hp: '200', 
         defense: '4', 
         attackBonus: '9', 
         damageMax: '22', 
-        xpReward: '900',
+        xpReward: '750',
         cssClass: 'zombie',
-        level: '10'
+        level: '11'
       },
       // 8. Alue: Synkkä sydänmetsä
       { 
         name: 'Ihmissusi', 
-        hp: '205', 
+        hp: '235', 
         defense: '6', 
         attackBonus: '12', 
         damageMax: '24', 
-        xpReward: '1050',
+        xpReward: '950',
         cssClass: 'ihmissusi',
         level: '12'
       },
       // 9. Alue: Ränsistynyt mökki (PÄÄVASTUS)
       { 
         name: 'Kirottujen Velho', 
-        hp: '280', 
-        defense: '10', 
+        hp: '285', 
+        defense: '9', 
         attackBonus: '10', 
         damageMax: '26', 
         xpReward: '1200',

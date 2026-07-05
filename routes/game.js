@@ -284,11 +284,11 @@ router.post('/enter-combat', async (req, res) => {
         currentXp -= xpNeeded;
         currentLevel += 1;
 
-        const hpBonus = session.characterType === 'Mekaanikko' ? 15 : 10;
+        const hpBonus = 15; // Molemmat hahmot saavat +15 HP taistelun päättyessä, ei enää eroa luokkien välillä
         currentMaxHp += hpBonus;
 
         session.stats.hp = currentMaxHp;
-        levelUpLogs.push(`✨ LEVEL UP! Saavutit tason ${currentLevel}! Maksimielämäsi nousivat arvoon ${currentMaxHp} HP ja kuntosi palautui täyteen!`);
+        levelUpLogs.push(`✨ LEVEL UP! Saavutit tason ${currentLevel}! Maksimielämäsi nousivat arvoon ${currentMaxHp} HP!`);
         xpNeeded = currentLevel * 100;
       }
 

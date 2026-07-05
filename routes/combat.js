@@ -28,7 +28,7 @@ router.post('/turn', async (req, res) => {
       return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
     }
 
-    // 👾 KORJATTU: Haetaan se hirviö, joka on parhaillaan merkitty istuntoon!
+    // 👾Haetaan se hirviö, joka on parhaillaan merkitty istuntoon!
     const monsterNameInSession = session.currentMonsterName || 'Varjohahmo';
     let dbMonster = await Monster.findOne({ name: monsterNameInSession });
     if (!dbMonster) {
@@ -122,7 +122,7 @@ router.post('/turn', async (req, res) => {
             if ((session.companionWeaponDurability || 0) <= 0) {
               combatLogEntries.push(`⚠️ ${session.companionName}:n ase (${session.companionWeaponName}) on rikki! Hän ei voi hyökätä tehokkaasti.`);
             } else {
-              const companionRoll = rollDice(1, 20) + 3; // Kiinteä bonus, ei skaalaudu tason mukana
+              const companionRoll = rollDice(1, 20) + 4; // Kiinteä bonus, ei skaalaudu tason mukana
               if (companionRoll >= monster.defense) {
                 const companionDamage = rollDice(1, 6);
                 monster.hp = Math.max(0, monster.hp - companionDamage);
@@ -195,16 +195,17 @@ router.post('/turn', async (req, res) => {
         currentXp += monster.xpReward;
         let xpNeeded = currentLevel * 100;
 
-        // 🌟 DYNAAMINEN LEVEL UP PROGRESSIO SILMUKASSA
+       // 🌟 DYNAAMINEN LEVEL UP PROGRESSIO SILMUKASSA
         while (currentXp >= xpNeeded) {
           currentXp -= xpNeeded;
           currentLevel += 1;
           
-          const hpBonus = session.characterType === 'Mekaanikko' ? 15 : 10;
+          // 🔥Molemmat hahmot saavat nyt tismalleen saman +15 HP taistelun päättyessä
+          const hpBonus = 15; 
           currentMaxHp += hpBonus;
           
           session.stats.hp = currentMaxHp; // Täytetään elämät tasonnousussa
-          combatLogEntries.push(`✨ LEVEL UP! Saavutit tason ${currentLevel}! Maksimielämäsi nousivat arvoon ${currentMaxHp} HP ja kuntosi palautui täyteen!`);
+          combatLogEntries.push(`✨ LEVEL UP! Saavutit tason ${currentLevel}! Maksimielämäsi nousivat arvoon ${currentMaxHp} HP!`);
           xpNeeded = currentLevel * 100;
         }
 
