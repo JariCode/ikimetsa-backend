@@ -81,57 +81,57 @@ export const seedMonsters = async () => {
       // 5. Alue: Luolasto (Vastus 2)
       { 
         name: 'Jättiläishämähäkki', 
-        hp: '105', 
+        hp: '135', 
         defense: '10', 
-        attackBonus: '4', 
+        attackBonus: '6', 
         damageMax: '17', 
         xpReward: '500',
         cssClass: 'hamahakki',
-        level: '6'
+        level: '8'
       },
       // 6. Alue: Syvä metsä
       { 
         name: 'Metsäjättiläinen', 
-        hp: '110', 
+        hp: '160', 
         defense: '8', 
-        attackBonus: '7', 
+        attackBonus: '9', 
         damageMax: '22', 
         xpReward: '750',
         cssClass: 'metsajattilainen',
-        level: '7'
+        level: '9'
       },
       // 7. Alue: Hautausmaa
       { 
         name: 'Rypevä Zombie', 
-        hp: '130', 
+        hp: '180', 
         defense: '4', 
-        attackBonus: '8', 
+        attackBonus: '9', 
         damageMax: '22', 
         xpReward: '900',
         cssClass: 'zombie',
-        level: '8'
+        level: '10'
       },
       // 8. Alue: Synkkä sydänmetsä
       { 
         name: 'Ihmissusi', 
-        hp: '145', 
+        hp: '205', 
         defense: '6', 
-        attackBonus: '9', 
+        attackBonus: '12', 
         damageMax: '24', 
         xpReward: '1050',
         cssClass: 'ihmissusi',
-        level: '9'
+        level: '12'
       },
       // 9. Alue: Ränsistynyt mökki (PÄÄVASTUS)
       { 
         name: 'Kirottujen Velho', 
-        hp: '180', 
+        hp: '280', 
         defense: '10', 
         attackBonus: '10', 
         damageMax: '26', 
         xpReward: '1200',
         cssClass: 'velho',
-        level: '12'
+        level: '15'
       }
     ]);
 

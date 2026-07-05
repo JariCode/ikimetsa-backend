@@ -60,6 +60,8 @@ router.post('/turn', async (req, res) => {
     let nextTurn = session.currentTurn || null;
     let initiativeWinner = session.combatInitiative || null;
     let displayRoll = null; // 🎲 Tämän kierroksen "puhdas" d20-heitto (ilman bonuksia) noppa-animaatiota varten
+    let damageDie1 = null; // 🎲 Vahingon ensimmäinen d8-noppa (vain jos pelaaja osui) - vierekkäistä nopka-animaatiota varten
+    let damageDie2 = null; // 🎲 Vahingon toinen d8-noppa
 
     if (action === 'hyokkaa') {
       if (!initiativeWinner) {
@@ -96,9 +98,13 @@ router.post('/turn', async (req, res) => {
             const attackRoll = rawAttackRoll + playerAttackBonus;
             displayRoll = rawAttackRoll;
             if (attackRoll >= monster.defense) {
-              playerDamageDealt = rollDice(1, 8) + rollDice(1, 8) + (parseInt(session.weaponDamageBonus) || 0);
+              damageDie1 = rollDice(1, 8);
+              damageDie2 = rollDice(1, 8);
+              const weaponBonus = parseInt(session.weaponDamageBonus) || 0;
+              playerDamageDealt = damageDie1 + damageDie2 + weaponBonus;
               monster.hp = Math.max(0, monster.hp - playerDamageDealt);
-              combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Osut! Teet ${playerDamageDealt} pistettä vahinkoa kohteeseen ${monster.name}.`);
+              const bonusText = weaponBonus > 0 ? ` +${weaponBonus} aseesta` : '';
+              combatLogEntries.push(`⚔️ Heitit d20: [${rawAttackRoll}] (+${playerAttackBonus} tasosta) - Osut! Vahinko: [${damageDie1}] + [${damageDie2}]${bonusText} = ${playerDamageDealt} pistettä kohteeseen ${monster.name}.`);
 
               if (weapon) {
                 weapon.durability = Math.max(0, (parseInt(weapon.durability) || 0) - 1);
@@ -258,6 +264,8 @@ router.post('/turn', async (req, res) => {
             initiativeWinner: null,
             nextTurn: null,
             diceRoll: displayRoll,
+            damageDie1,
+            damageDie2,
             isGameCompleted: true, // 🔥 Lähetetään frontille käsky siirtyä VictoryScreeniin!
             companionActive: session.companionActive,
             companionHp: session.companionHp,
@@ -299,6 +307,8 @@ router.post('/turn', async (req, res) => {
       initiativeWinner,
       nextTurn,
       diceRoll: displayRoll,
+      damageDie1,
+      damageDie2,
       companionActive: session.companionActive,
       companionHp: session.companionHp,
       companionMaxHp: session.companionMaxHp,
