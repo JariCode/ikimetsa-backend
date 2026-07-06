@@ -62,6 +62,7 @@ router.post('/turn', async (req, res) => {
     let displayRoll = null; // 🎲 Tämän kierroksen "puhdas" d20-heitto (ilman bonuksia) noppa-animaatiota varten
     let damageDie1 = null; // 🎲 Vahingon ensimmäinen d8-noppa (vain jos pelaaja osui) - vierekkäistä nopka-animaatiota varten
     let damageDie2 = null; // 🎲 Vahingon toinen d8-noppa
+    let monsterDamageDie = null; // 🎲 Hirviön yksi vahinkonoppa (vain jos hirviö osui pelaajaan tai kumppaniin) - oma punainen noppa
 
     if (action === 'hyokkaa') {
       if (!initiativeWinner) {
@@ -153,10 +154,11 @@ router.post('/turn', async (req, res) => {
           if (targetsCompanion) {
             const companionDefense = parseInt(session.companionDefense) || 9;
             if (monsterAttackRoll >= companionDefense) {
-              const companionDamageTaken = rollDice(1, monster.damageMax);
+              monsterDamageDie = rollDice(1, monster.damageMax);
+              const companionDamageTaken = monsterDamageDie;
               const newCompanionHp = Math.max(0, (session.companionHp || 0) - companionDamageTaken);
               session.companionHp = newCompanionHp;
-              combatLogEntries.push(`💥 ${monster.name} iskee ${session.companionName}:a kohti! (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja osuu! ${session.companionName} menettää ${companionDamageTaken} HP.`);
+              combatLogEntries.push(`💥 ${monster.name} iskee ${session.companionName}:a kohti! (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja osuu! Vahinko: [${monsterDamageDie}] = ${companionDamageTaken} HP.`);
 
               if (newCompanionHp <= 0) {
                 session.companionActive = false;
@@ -166,9 +168,10 @@ router.post('/turn', async (req, res) => {
               combatLogEntries.push(`🛡️ ${monster.name} yrittää iskeä ${session.companionName}:a (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) mutta osuu ohi.`);
             }
           } else if (monsterAttackRoll >= playerDefense) {
-            monsterDamageDealt = rollDice(1, monster.damageMax);
+            monsterDamageDie = rollDice(1, monster.damageMax);
+            monsterDamageDealt = monsterDamageDie;
             currentPlayerHp = Math.max(0, currentPlayerHp - monsterDamageDealt);
-            combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja osui sinuun! Menetät ${monsterDamageDealt} HP.`);
+            combatLogEntries.push(`💥 ${monster.name} iskee! (Heitti d20: [${monsterRawRoll}] +${monster.attackBonus} voimasta) ja osui sinuun! Vahinko: [${monsterDamageDie}] = ${monsterDamageDealt} HP.`);
 
             if (currentPlayerHp <= 0) {
               combatLogEntries.push(`💀 Sait kuolettavan iskun ja vaivut pimeyteen...`);
@@ -267,6 +270,7 @@ router.post('/turn', async (req, res) => {
             diceRoll: displayRoll,
             damageDie1,
             damageDie2,
+            monsterDamageDie,
             isGameCompleted: true, // 🔥 Lähetetään frontille käsky siirtyä VictoryScreeniin!
             companionActive: session.companionActive,
             companionHp: session.companionHp,
@@ -310,6 +314,7 @@ router.post('/turn', async (req, res) => {
       diceRoll: displayRoll,
       damageDie1,
       damageDie2,
+      monsterDamageDie,
       companionActive: session.companionActive,
       companionHp: session.companionHp,
       companionMaxHp: session.companionMaxHp,
