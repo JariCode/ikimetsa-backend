@@ -56,8 +56,8 @@ const seedDatabase = async () => {
     const classCount = await CharacterClass.countDocuments();
     if (classCount === 0) {
       await CharacterClass.create([
-        { name: 'Metsästäjä', description: 'Tuntee metsän polut ja varjot.', baseHp: '40', startingWeapon: { name: 'Vanha puukko', maxDurability: '10' }, initiativeBonus: '4' },
-        { name: 'Mekaanikko', description: 'Kaupunkiolento raskailla työkaluilla.', baseHp: '55', startingWeapon: { name: 'Raskas jakoavain', maxDurability: '15' }, initiativeBonus: '0' }
+        { name: 'Metsästäjä', description: 'Tuntee metsän polut ja varjot.', baseHp: '40', startingWeapon: { name: 'Vanha puukko', maxDurability: '8' }, initiativeBonus: '4' },
+        { name: 'Mekaanikko', description: 'Kaupunkiolento raskailla työkaluilla.', baseHp: '55', startingWeapon: { name: 'Raskas jakoavain', maxDurability: '12' }, initiativeBonus: '0' }
       ]);
       console.log('Hahmoluokat alustettu tietokantaan!');
     }

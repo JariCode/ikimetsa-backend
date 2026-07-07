@@ -29,7 +29,7 @@ export const seedMonsters = async () => {
         hp: '55', 
         defense: '10', 
         attackBonus: '1', 
-        damageMax: '9', 
+        damageMax: '10', 
         xpReward: '85',
         cssClass: 'varjohahmo',
         level: '1' // 👈 Hirviön taso lisätty!
@@ -59,9 +59,9 @@ export const seedMonsters = async () => {
       // 4. Alue: Järvi
       { 
         name: 'Suomuinen Järvikäärme', 
-        hp: '90', 
+        hp: '95', 
         defense: '9', 
-        attackBonus: '3', 
+        attackBonus: '4', 
         damageMax: '13', 
         xpReward: '250',
         cssClass: 'jarvikaarme',
@@ -82,7 +82,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Jättiläishämähäkki', 
         hp: '190', 
-        defense: '10', 
+        defense: '11', 
         attackBonus: '6', 
         damageMax: '17', 
         xpReward: '500',
@@ -93,7 +93,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Metsäjättiläinen', 
         hp: '210', 
-        defense: '8', 
+        defense: '11', 
         attackBonus: '9', 
         damageMax: '22', 
         xpReward: '600',
@@ -104,7 +104,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Rypevä Zombie', 
         hp: '245', 
-        defense: '4', 
+        defense: '8', 
         attackBonus: '10', 
         damageMax: '22', 
         xpReward: '750',
@@ -115,7 +115,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Ihmissusi', 
         hp: '265', 
-        defense: '6', 
+        defense: '9', 
         attackBonus: '13', 
         damageMax: '24', 
         xpReward: '850',
@@ -126,7 +126,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Kirottujen Velho', 
         hp: '295', 
-        defense: '9', 
+        defense: '12', 
         attackBonus: '14', 
         damageMax: '26', 
         xpReward: '1200',
