@@ -225,16 +225,18 @@ router.post('/turn', async (req, res) => {
           session.inventory[0].durability = session.inventory[0].maxDurability;
         }
 
-        session.checkpoint = {
-          xp: currentXp,
-          level: currentLevel,
-          maxHp: currentMaxHp
-        };
-        session.markModified('checkpoint');
-        
         const currentPoints = parseInt(session.repairPoints) || 0;
         session.repairPoints = currentPoints + 2;
 
+        // 🔥 Päivitetty lohko tallentaa uudet korjauspisteet heti talteen osaksi checkpointia
+        session.checkpoint = {
+          xp: currentXp,
+          level: currentLevel,
+          maxHp: currentMaxHp,
+          repairPoints: session.repairPoints
+        };
+        session.markModified('checkpoint');
+        
         session.currentMonsterHp = 0;
         session.combatInitiative = null;
         session.currentTurn = null;

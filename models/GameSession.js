@@ -54,7 +54,8 @@ const gameSessionSchema = new mongoose.Schema({
   checkpoint: {
     xp: { type: Number, default: 0 },
     level: { type: Number, default: 1 },
-    maxHp: { type: Number, default: 40 }
+    maxHp: { type: Number, default: 40 },
+    repairPoints: { type: Number, default: 5 } // 🔧 Lisätty tämä rivi!
   }
 }, { timestamps: true });
 

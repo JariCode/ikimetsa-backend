@@ -96,7 +96,7 @@ router.post('/start-game', async (req, res) => {
       hasEnteredCombat: false,
       currentAreaIndex: 1,
       isGameCompleted: false,
-      checkpoint: { xp: 0, level: 1, maxHp: hpValue }
+      checkpoint: { xp: 0, level: 1, maxHp: hpValue, repairPoints: 5 } // 🔥 Päivitetty muistamaan aloituspisteet
     });
 
     await newSession.save();
@@ -384,8 +384,6 @@ router.post('/enter-combat', async (req, res) => {
   }
 });
 
-const STARTING_REPAIR_POINTS = 5;
-
 router.post('/respawn', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -409,7 +407,7 @@ router.post('/respawn', async (req, res) => {
     }
     const freshMonsterHp = parseInt(dbMonster.hp) || 25;
 
-    const checkpoint = session.checkpoint || { xp: 0, level: 1, maxHp: session.stats.maxHp || 40 };
+    const checkpoint = session.checkpoint || { xp: 0, level: 1, maxHp: session.stats.maxHp || 40, repairPoints: 5 };
 
     session.stats.xp = checkpoint.xp;
     session.stats.level = checkpoint.level;
@@ -419,7 +417,8 @@ router.post('/respawn', async (req, res) => {
     if (session.inventory[0]) {
       session.inventory[0].durability = session.inventory[0].maxDurability;
     }
-    session.repairPoints = STARTING_REPAIR_POINTS;
+    // 🔥 Haetaan pisteet tallennuspisteestä, mutta varmistetaan vähintään 5 pisteen armopala suojaksi!
+    session.repairPoints = Math.max(5, checkpoint.repairPoints !== undefined ? checkpoint.repairPoints : 5);
 
     session.currentMonsterHp = freshMonsterHp;
     session.currentMonsterCssClass = dbMonster.cssClass || 'varjohahmo';
@@ -542,7 +541,8 @@ router.post('/continue-journey', async (req, res) => {
     session.checkpoint = {
       xp: session.stats.xp,
       level: session.stats.level,
-      maxHp: session.stats.maxHp
+      maxHp: session.stats.maxHp,
+      repairPoints: session.repairPoints // 🔥 Tallennettaan korjauspisteet matkan jatkuessa nuotiolta
     };
 
     session.stats.hp = session.stats.maxHp;
