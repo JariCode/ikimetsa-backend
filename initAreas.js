@@ -87,7 +87,7 @@ export const seedAreas = async () => {
         treasureEvent: {
           // 🎒 Kelluva pussi järven pinnalla - haltijan siunaama aarre.
           discoveryText: 'Jokin kelluu hiljaa aaltojen mukana lautan vieressä.\nKostea nahkapussi, jonka suu on sidottu hopealangalla.\nSisältä hehkuu himmeä, haltijoiden loihtima valo.',
-          repairPointsBonus: 5,
+          repairPointsBonus: 3,
           maxHpBonus: 10
         },
         goodRollTexts: [

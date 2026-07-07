@@ -81,7 +81,7 @@ export const seedMonsters = async () => {
       // 5. Alue: Luolasto (Vastus 2)
       { 
         name: 'Jättiläishämähäkki', 
-        hp: '185', 
+        hp: '190', 
         defense: '10', 
         attackBonus: '6', 
         damageMax: '17', 
@@ -92,7 +92,7 @@ export const seedMonsters = async () => {
       // 6. Alue: Syvä metsä
       { 
         name: 'Metsäjättiläinen', 
-        hp: '205', 
+        hp: '210', 
         defense: '8', 
         attackBonus: '9', 
         damageMax: '22', 
@@ -103,9 +103,9 @@ export const seedMonsters = async () => {
       // 7. Alue: Hautausmaa
       { 
         name: 'Rypevä Zombie', 
-        hp: '240', 
+        hp: '245', 
         defense: '4', 
-        attackBonus: '9', 
+        attackBonus: '10', 
         damageMax: '22', 
         xpReward: '750',
         cssClass: 'zombie',
@@ -114,9 +114,9 @@ export const seedMonsters = async () => {
       // 8. Alue: Synkkä sydänmetsä
       { 
         name: 'Ihmissusi', 
-        hp: '255', 
+        hp: '265', 
         defense: '6', 
-        attackBonus: '12', 
+        attackBonus: '13', 
         damageMax: '24', 
         xpReward: '850',
         cssClass: 'ihmissusi',
@@ -125,9 +125,9 @@ export const seedMonsters = async () => {
       // 9. Alue: Ränsistynyt mökki (PÄÄVASTUS)
       { 
         name: 'Kirottujen Velho', 
-        hp: '285', 
+        hp: '295', 
         defense: '9', 
-        attackBonus: '10', 
+        attackBonus: '14', 
         damageMax: '26', 
         xpReward: '1200',
         cssClass: 'velho',
