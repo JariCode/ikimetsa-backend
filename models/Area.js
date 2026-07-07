@@ -27,6 +27,11 @@ const areaSchema = new mongoose.Schema({
     mechanicWeaponName: { type: String, default: null },
     damageBonus: { type: Number, default: 0 }
   },
+  treasureEvent: {
+    discoveryText: { type: String, default: null },
+    repairPointsBonus: { type: Number, default: 0 },
+    maxHpBonus: { type: Number, default: 0 }
+  },
   goodRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 3-5
   badRollTexts: { type: [String], default: [] }, // satunnaisesti arvottava teksti heitoille 1-2
   mechanic: { type: String, default: 'normal' } // 'normal' | 'swamp_sink' jne - laajennettavissa myöhemmin
