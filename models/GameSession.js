@@ -32,6 +32,8 @@ const gameSessionSchema = new mongoose.Schema({
   // ⚔️ Parempi ase löytyy kerran (alue 8) - korvaa pysyvästi alkuperäisen aseen
   weaponFound: { type: Boolean, default: false },
   weaponDamageBonus: { type: Number, default: 0 },
+  // 🎒 Aarrepussi löytyy kerran (alue 4, Järvi) - antaa korjauspisteitä ja pysyvän max HP -bonuksen
+  treasureFound: { type: Boolean, default: false },
 
   // 🧑‍🤝‍🧑 Matkakumppani - löytyy kerran (companionFound estää löytöruudun toistumisen),
   // ja kun aktiivinen, osallistuu jokaiseen taisteluun pelaajan hyökkäysvuoron yhteydessä.

@@ -84,6 +84,12 @@ export const seedAreas = async () => {
         monsterName: 'Suomuinen Järvikäärme',
         backgroundClass: 'traveling-background-jarvi',
         encounterText: 'Vesi kuohahtaa lautan alla. Jokin suomuinen nousee pinnalle aivan vieressäsi...',
+        treasureEvent: {
+          // 🎒 Kelluva pussi järven pinnalla - haltijan siunaama aarre.
+          discoveryText: 'Jokin kelluu hiljaa aaltojen mukana lautan vieressä.\nKostea nahkapussi, jonka suu on sidottu hopealangalla.\nSisältä hehkuu himmeä, haltijoiden loihtima valo.',
+          repairPointsBonus: 5,
+          maxHpBonus: 10
+        },
         goodRollTexts: [
           'Soudat tasaisin vedoin, lautta liukuu tyynesti veden pinnalla.',
           'Airo uppoaa veteen äänettömästi, matka etenee vakaasti kohti toista rantaa.',

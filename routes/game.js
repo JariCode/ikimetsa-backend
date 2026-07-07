@@ -226,6 +226,71 @@ router.post('/find-weapon', async (req, res) => {
   }
 });
 
+// 🎒 Aarrepussi (alue 4, Järvi) - kelluva pussi jonka pelaaja voi nostaa vedestä
+// kerran. Antaa korjauspisteitä ja pysyvän max HP -bonuksen. Sama kertaluontoinen
+// löytölogiikka kuin aseella ja kumppanilla (treasureFound estää toiston).
+router.post('/find-treasure', async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userId = decoded.id;
+
+    const session = await GameSession.findOne({ userId });
+    if (!session) {
+      return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
+    }
+
+    if (session.treasureFound) {
+      return res.status(400).json({ message: 'Aarrepussi on jo löydetty.' });
+    }
+
+    const currentArea = await Area.findOne({ order: parseInt(session.currentAreaIndex) || 1 });
+    if (!currentArea || !currentArea.treasureEvent || !currentArea.treasureEvent.discoveryText) {
+      return res.status(400).json({ message: 'Tällä alueella ei ole aarretapahtumaa.' });
+    }
+
+    const repairBonus = parseInt(currentArea.treasureEvent.repairPointsBonus) || 0;
+    const hpBonus = parseInt(currentArea.treasureEvent.maxHpBonus) || 0;
+
+    session.treasureFound = true;
+
+    // Korjauspisteet lisätään pottiin
+    session.repairPoints = (parseInt(session.repairPoints) || 0) + repairBonus;
+
+    // Max HP nousee pysyvästi, ja nykyinen HP nousee saman verran (juoma parantaa heti)
+    const oldMaxHp = parseInt(session.stats.maxHp) || 40;
+    session.stats.maxHp = oldMaxHp + hpBonus;
+    session.stats.hp = (parseInt(session.stats.hp) || oldMaxHp) + hpBonus;
+
+    // Bonukset päivitetään myös checkpointiin, jottei ne katoa respawnissa
+    if (session.checkpoint) {
+      session.checkpoint.maxHp = (parseInt(session.checkpoint.maxHp) || oldMaxHp) + hpBonus;
+      session.markModified('checkpoint');
+    }
+
+    session.combatLogs = [...(session.combatLogs || []), `🎒 Avasit haltijoiden pussin: +${repairBonus} korjauspistettä ja +${hpBonus} elinvoimaa!`];
+
+    session.markModified('stats');
+    session.markModified('repairPoints');
+    session.markModified('combatLogs');
+    await session.save();
+
+    const newLog = new Log({
+      action: 'TREASURE_FOUND',
+      details: `Pelaaja löysi aarrepussin: +${repairBonus} korjauspistettä, +${hpBonus} max HP`,
+      performedBy: userId
+    });
+    await newLog.save();
+
+    const responseBody = await attachAreaToSession(session);
+    res.json(responseBody);
+  } catch (error) {
+    res.status(500).json({ message: 'Aarrepussin löytäminen epäonnistui', error: error.message });
+  }
+});
+
 // 📝 Tallentaa yksittäisen lokirivin, jota ei muuten tallennettaisi minnekään -
 // käytetään liikkumisruudun nopanheittoteksteille ja vastaavalle selainpuolen
 // tekstille joka ei muuten koskaan kulkisi palvelimen kautta.
