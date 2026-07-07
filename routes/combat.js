@@ -123,7 +123,10 @@ router.post('/turn', async (req, res) => {
             if ((session.companionWeaponDurability || 0) <= 0) {
               combatLogEntries.push(`⚠️ ${session.companionName}:n ase (${session.companionWeaponName}) on rikki! Hän ei voi hyökätä tehokkaasti.`);
             } else {
-              const companionRoll = rollDice(1, 20) + 4; // Kiinteä bonus, ei skaalaudu tason mukana
+              // 🎯 Kumppanin osumabonus skaalautuu pelaajan tason mukana, mutta jää
+              // johdonmukaisesti 2 tasoa jälkeen (kumppani on hieman heikompi kuin pelaaja).
+              const companionLevel = Math.max(1, (parseInt(session.stats.level) || 1) - 2);
+              const companionRoll = rollDice(1, 20) + companionLevel;
               if (companionRoll >= monster.defense) {
                 const companionDamage = rollDice(1, 6);
                 monster.hp = Math.max(0, monster.hp - companionDamage);
