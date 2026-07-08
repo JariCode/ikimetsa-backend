@@ -2,11 +2,15 @@ import 'dotenv/config';
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import gameRoutes from './routes/game.js';
 import combatRoutes from './routes/combat.js';
+
+import sanitizeRequest from './middleware/sanitize.js';
+import { generalLimiter, authLimiter } from './middleware/rateLimiters.js';
 
 import CharacterClass from './models/CharacterClass.js';
 
@@ -29,12 +33,34 @@ if (!MONGODB_URI) {
 
 const app = express();
 
+// 🔧 Render (ja muut pilvihostit) ovat käänteisproxyn takana. Tämä kertoo
+// Expressille että se saa luottaa X-Forwarded-For -otsakkeeseen, jotta
+// rate limiter näkee oikean käyttäjän IP:n eikä proxyn osoitetta.
+app.set('trust proxy', 1);
+
+// 🪖 Helmet asettaa turvalliset HTTP-otsakkeet (piilottaa X-Powered-By:n,
+// suojaa clickjackingilta, pakottaa turvakäytäntöjä). Heti ensimmäisenä.
+app.use(helmet());
+
+// 🌐 CORS - vain oma frontend sallitaan, ja evästeet kulkevat mukana.
 app.use(cors({
   origin: FRONTEND_URL,
   credentials: true
 }));
-app.use(express.json());
+
+// 📦 JSON-body sallitaan, mutta kokoraja estää valtavat payloadit (DoS-suoja).
+app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
+
+// 🧼 Puhdistaa NoSQL-injektiot ($-operaattorit) kaikista pyynnöistä.
+app.use(sanitizeRequest);
+
+// 🚦 Yleinen pyyntörajoitin kaikille API-reiteille (DoS-suoja).
+app.use('/api/', generalLimiter);
+
+// 🚦 Tiukempi rajoitin kirjautumiseen ja rekisteröintiin (brute force -suoja).
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Tietokantayhteys
 mongoose.connect(MONGODB_URI)
