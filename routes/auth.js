@@ -71,6 +71,19 @@ function getUserIdFromRequest(req) {
   }
 }
 
+// 🔐 Lukee sekä käyttäjän id:n että roolin tokenista. Admin-reitit käyttävät
+// tätä varmistaakseen että pyytäjä on todella admin ennen toiminnon suoritusta.
+function getAuthFromRequest(req) {
+  const token = req.cookies.token;
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return { id: decoded.id, role: decoded.role };
+  } catch (error) {
+    return null;
+  }
+}
+
 // REKISTERÖITYMINEN
 router.post('/register', async (req, res) => {
   try {
@@ -162,6 +175,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       username: user.username,
+      role: user.role,
       gameSessionId: session ? session._id : null,
       session: sessionWithArea
     });
@@ -192,6 +206,7 @@ router.get('/me', async (req, res) => {
     res.json({
       loggedIn: true,
       username: user.username,
+      role: user.role,
       gameSessionId: session ? session._id : null,
       session: sessionWithArea
     });
@@ -208,6 +223,16 @@ router.post('/logout', async (req, res) => {
       const decoded = jwt.verify(token, JWT_SECRET);
       const userId = decoded.id;
 
+      const loggedOutUser = await User.findById(userId);
+      const logoutName = loggedOutUser ? loggedOutUser.username : 'Tuntematon';
+
+      const newLogoutLog = new Log({
+        action: 'USER_LOGOUT',
+        details: `Käyttäjä ${logoutName} kirjautui ulos`,
+        performedBy: logoutName
+      });
+      await newLogoutLog.save();
+
       const GameSession = (await import('../models/GameSession.js')).default;
       const session = await GameSession.findOne({ userId });
       
@@ -218,7 +243,7 @@ router.post('/logout', async (req, res) => {
         const newLog = new Log({
           action: 'GAME_RESET_ON_LOGOUT',
           details: `Pelaajan voitettu peli nollattiin automaattisesti uloskirjautumisen yhteydessä.`,
-          performedBy: userId
+          performedBy: logoutName
         });
         await newLog.save();
       }
@@ -348,6 +373,14 @@ router.delete('/account', async (req, res) => {
       return res.status(400).json({ message: 'Väärä salasana' });
     }
 
+    // 🛡️ Estä viimeisen adminin poistuminen, jottei sovellus jää ilman ylläpitäjää.
+    if (user.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(403).json({ message: 'Et voi poistaa tiliäsi, koska olet järjestelmän ainoa ylläpitäjä. Nimitä ensin toinen ylläpitäjä.' });
+      }
+    }
+
     const deletedUsername = user.username;
 
     const GameSession = (await import('../models/GameSession.js')).default;
@@ -365,6 +398,156 @@ router.delete('/account', async (req, res) => {
     res.json({ message: 'Tili ja pelitiedot poistettu' });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe tilin poistossa', error: error.message });
+  }
+});
+
+// ==========================================================================
+// 🔐 ADMIN-REITIT - vain ylläpitäjille. Jokainen tarkistaa roolin tokenista,
+// ja kriittiset toiminnot suojaavat adminia itseltään (ei voi alentaa/poistaa
+// itseään, jottei sovellus jää ilman ylläpitäjää).
+// ==========================================================================
+
+// Apuvahvistus: palauttaa admin-käyttäjän tai lähettää virheen ja palauttaa null.
+async function requireAdmin(req, res) {
+  const auth = getAuthFromRequest(req);
+  if (!auth || !auth.id) {
+    res.status(401).json({ message: 'Ei oikeuksia' });
+    return null;
+  }
+  if (auth.role !== 'admin') {
+    res.status(403).json({ message: 'Vain ylläpitäjillä on pääsy tähän.' });
+    return null;
+  }
+  return auth;
+}
+
+// 📋 Kaikki käyttäjät (ilman salasanoja)
+router.get('/admin/users', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const users = await User.find({}, 'username role createdAt').sort({ createdAt: -1 });
+    res.json({ users, currentAdminId: admin.id });
+  } catch (error) {
+    res.status(500).json({ message: 'Käyttäjien haku epäonnistui', error: error.message });
+  }
+});
+
+// 📜 Lokit (uusimmat ensin) - vain tilihallinnan tapahtumat, ei pelitapahtumia.
+// Frontend suodattaa lisäksi käyttäjänimihaulla.
+router.get('/admin/logs', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    // Vain nämä toiminnot kiinnostavat ylläpitäjää - pelitapahtumat (GAME_START,
+    // WEAPON_FOUND, COMPANION_FOUND, PLAYER_RESPAWN ym.) jätetään pois.
+    const adminRelevantActions = [
+      'USER_REGISTER',
+      'USER_LOGIN',
+      'USER_LOGOUT',
+      'USER_USERNAME_CHANGE',
+      'USER_PASSWORD_CHANGE',
+      'USER_ACCOUNT_DELETE',
+      'ADMIN_USER_DELETE',
+      'ADMIN_ROLE_CHANGE'
+    ];
+
+    const logs = await Log.find({ action: { $in: adminRelevantActions } })
+      .sort({ createdAt: -1 })
+      .limit(500);
+    res.json({ logs });
+  } catch (error) {
+    res.status(500).json({ message: 'Lokien haku epäonnistui', error: error.message });
+  }
+});
+
+// 🔄 Vaihda käyttäjän rooli (user <-> admin). Admin ei voi alentaa itseään.
+router.patch('/admin/user/:id/role', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const targetId = req.params.id;
+    const { role } = req.body;
+
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'Virheellinen rooli.' });
+    }
+
+    // 🛡️ Admin ei voi alentaa itseään, jottei jää vahingossa ilman oikeuksia.
+    if (targetId === admin.id && role !== 'admin') {
+      return res.status(403).json({ message: 'Et voi poistaa omaa ylläpitäjän rooliasi.' });
+    }
+
+    const target = await User.findById(targetId);
+    if (!target) {
+      return res.status(404).json({ message: 'Käyttäjää ei löytynyt' });
+    }
+
+    // 🛡️ Jos ollaan alentamassa viimeistä adminia, estä (varmistus senkin varalta
+    // että kohteena on eri admin kuin pyytäjä).
+    if (target.role === 'admin' && role !== 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(403).json({ message: 'Järjestelmässä on oltava vähintään yksi ylläpitäjä.' });
+      }
+    }
+
+    const oldRole = target.role;
+    target.role = role;
+    await target.save();
+
+    const adminUser = await User.findById(admin.id);
+    const newLog = new Log({
+      action: 'ADMIN_ROLE_CHANGE',
+      details: `Rooli vaihdettu käyttäjälle ${target.username}: ${oldRole} -> ${role}`,
+      performedBy: adminUser ? adminUser.username : 'Tuntematon ylläpitäjä'
+    });
+    await newLog.save();
+
+    res.json({ message: 'Rooli päivitetty', username: target.username, role: target.role });
+  } catch (error) {
+    res.status(500).json({ message: 'Roolin vaihto epäonnistui', error: error.message });
+  }
+});
+
+// 🗑️ Poista käyttäjä (ja hänen pelitietonsa). Admin ei voi poistaa itseään.
+router.delete('/admin/user/:id', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const targetId = req.params.id;
+
+    // 🛡️ Admin ei voi poistaa itseään admin-paneelin kautta.
+    if (targetId === admin.id) {
+      return res.status(403).json({ message: 'Et voi poistaa itseäsi ylläpitopaneelista.' });
+    }
+
+    const target = await User.findById(targetId);
+    if (!target) {
+      return res.status(404).json({ message: 'Käyttäjää ei löytynyt' });
+    }
+
+    const deletedUsername = target.username;
+
+    const GameSession = (await import('../models/GameSession.js')).default;
+    await GameSession.deleteOne({ userId: target._id });
+    await User.deleteOne({ _id: target._id });
+
+    const adminUser = await User.findById(admin.id);
+    const newLog = new Log({
+      action: 'ADMIN_USER_DELETE',
+      details: `Ylläpitäjä poisti käyttäjän ${deletedUsername} ja hänen pelitietonsa`,
+      performedBy: adminUser ? adminUser.username : 'Tuntematon ylläpitäjä'
+    });
+    await newLog.save();
+
+    res.json({ message: 'Käyttäjä poistettu', username: deletedUsername });
+  } catch (error) {
+    res.status(500).json({ message: 'Käyttäjän poisto epäonnistui', error: error.message });
   }
 });
 
