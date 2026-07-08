@@ -12,8 +12,6 @@ import combatRoutes from './routes/combat.js';
 import sanitizeRequest from './middleware/sanitize.js';
 import { generalLimiter, authLimiter } from './middleware/rateLimiters.js';
 
-import CharacterClass from './models/CharacterClass.js';
-
 // 🛡️ Kaikki ympäristömuuttujat vaaditaan eksplisiittisesti .env-tiedostosta -
 // ei kovakoodattuja oletusarvoja jotka voisivat piilottaa puuttuvan asetuksen.
 const PORT = process.env.PORT;
@@ -76,27 +74,12 @@ app.get('/', (req, res) => {
   res.send('Ikimetsän backend vastaa ja tietokantaa yhdistetään...');
 });
 
-// Alustetaan hahmoluokat (Teidän alkuperäinen siisti logiikka)
-const seedDatabase = async () => {
-  try {
-    const classCount = await CharacterClass.countDocuments();
-    if (classCount === 0) {
-      await CharacterClass.create([
-        { name: 'Metsästäjä', description: 'Tuntee metsän polut ja varjot.', baseHp: '40', startingWeapon: { name: 'Vanha puukko', maxDurability: '8' }, initiativeBonus: '4' },
-        { name: 'Mekaanikko', description: 'Kaupunkiolento raskailla työkaluilla.', baseHp: '55', startingWeapon: { name: 'Raskas jakoavain', maxDurability: '12' }, initiativeBonus: '0' }
-      ]);
-      console.log('Hahmoluokat alustettu tietokantaan!');
-    }
-  } catch (err) {
-    console.error('Tietokannan hahmoluokkien alustus epäonnistui:', err);
-  }
-};
-
-// 🚀 AJETAAN VAIN HAHMOLUOKKIEN SIEMENTÄMINEN KUN YHTEYS AUKEAA
-// Hirviöt asennetaan erikseen omalla asennustiedostolla komentoriviltä!
-mongoose.connection.once('open', () => {
-  seedDatabase(); // Hahmot
-});
+// 🌱 Kaikki pelidata (hahmoluokat, hirviöt, alueet) asennetaan tietokantaan
+// omilla asennustiedostoillaan komentoriviltä:
+//   node initCharacters.js
+//   node initMonsters.js
+//   node initAreas.js
+// Palvelin itse ei seedaa mitään, vaan lukee valmiin datan tietokannasta.
 
 app.listen(PORT, () => {
   console.log(`Palvelin käynnissä portissa ${PORT}`);
