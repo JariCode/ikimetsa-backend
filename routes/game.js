@@ -307,6 +307,14 @@ router.post('/log-message', async (req, res) => {
       return res.status(400).json({ message: 'Viesti puuttuu.' });
     }
 
+    // 🛡️ Pituusraja estää tietokannan paisuttamisen ylipitkillä viesteillä.
+    // Ei luoteta siihen että viesti tulee omasta frontendista - kuka tahansa voi
+    // lähettää pyynnön suoraan tähän reittiin, joten raja pakotetaan palvelimella.
+    // Normaalit pelilokiviestit ovat noin 100-200 merkkiä, joten 500 on väljä.
+    if (message.length > 500) {
+      return res.status(400).json({ message: 'Viesti on liian pitkä.' });
+    }
+
     const session = await GameSession.findOne({ userId });
     if (!session) {
       return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
