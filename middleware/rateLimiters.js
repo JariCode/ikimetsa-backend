@@ -19,9 +19,9 @@ export const generalLimiter = rateLimit({
 // arvaamisen. Vähän yrityksiä lyhyessä ajassa riittää oikealle käyttäjälle.
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minuuttia
-  max: 20, // per IP per ikkuna - normaali käyttäjä ei tarvitse enempää
+  max: 5, // per IP per ikkuna - normaali käyttäjä ei tarvitse enempää
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // onnistuneet kirjautumiset eivät kuluta kiintiötä
-  message: { message: 'Liikaa kirjautumisyrityksiä. Odota 15 minuuttia ja yritä uudelleen.' }
+  message: { message: 'Liikaa kirjautumisyrityksiä. Yritä myöhemmin uudelleen.' }
 });
