@@ -82,7 +82,7 @@ export const seedMonsters = async () => {
       { 
         name: 'Jättiläishämähäkki', 
         hp: '190', 
-        defense: '11', 
+        defense: '10', 
         attackBonus: '6', 
         damageMax: '17', 
         xpReward: '500',
@@ -93,9 +93,9 @@ export const seedMonsters = async () => {
       { 
         name: 'Metsäjättiläinen', 
         hp: '210', 
-        defense: '11', 
-        attackBonus: '9', 
-        damageMax: '22', 
+        defense: '10', 
+        attackBonus: '8', 
+        damageMax: '21', 
         xpReward: '600',
         cssClass: 'metsajattilainen',
         level: '11'
@@ -105,7 +105,7 @@ export const seedMonsters = async () => {
         name: 'Rypevä Zombie', 
         hp: '245', 
         defense: '8', 
-        attackBonus: '10', 
+        attackBonus: '11', 
         damageMax: '22', 
         xpReward: '750',
         cssClass: 'zombie',
@@ -117,7 +117,7 @@ export const seedMonsters = async () => {
         hp: '265', 
         defense: '9', 
         attackBonus: '13', 
-        damageMax: '24', 
+        damageMax: '25', 
         xpReward: '850',
         cssClass: 'ihmissusi',
         level: '14'
@@ -128,7 +128,7 @@ export const seedMonsters = async () => {
         hp: '295', 
         defense: '12', 
         attackBonus: '14', 
-        damageMax: '26', 
+        damageMax: '27', 
         xpReward: '1200',
         cssClass: 'velho',
         level: '15'
