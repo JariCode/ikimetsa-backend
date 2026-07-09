@@ -320,9 +320,17 @@ router.post('/log-message', async (req, res) => {
       return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
     }
 
-    session.combatLogs = [...(session.combatLogs || []), message];
-    session.markModified('combatLogs');
-    await session.save();
+    // 🛡️ Atominen $push findOneAndUpdate:lla load-muokkaa-tallenna-kaavan
+    // sijaan. Vanha tapa (lataa -> muokkaa JS:ssä -> session.save()) aiheutti
+    // Mongoosen versionvalvonnan (__v) hylkäämän "VersionError"-500:n kun
+    // useampi pyyntö (esim. nopea klikkailu) osui samaan sessioon lähes
+    // yhtä aikaa - molemmat latasivat saman version ja jälkimmäinen tallennus
+    // hylättiin. $push päivittää tietokantaa suoraan ilman lataus-vaihetta,
+    // joten useampi samanaikainen pyyntö ei enää törmää toisiinsa.
+    await GameSession.updateOne(
+      { userId },
+      { $push: { combatLogs: message } }
+    );
 
     res.json({ success: true });
   } catch (error) {
