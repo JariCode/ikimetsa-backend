@@ -172,6 +172,8 @@ export const seedAreas = async () => {
           discoveryText: 'Puoliksi mullan peittämä esine kimaltaa vanhan hautakiven juurella. Kaivat sen esiin varovasti.',
           hunterWeaponName: 'Machete',
           mechanicWeaponName: 'Sorkkarauta',
+          thiefWeaponName: 'Kaksoisterä',
+          strongmanWeaponName: 'Levytanko',
           damageBonus: 5
         },
         goodRollTexts: [

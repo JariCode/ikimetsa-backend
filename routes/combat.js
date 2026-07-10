@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import GameSession from '../models/GameSession.js';
 import Log from '../models/Log.js';
 import Monster from '../models/Monster.js';
+import CharacterClass from '../models/CharacterClass.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -27,6 +28,13 @@ router.post('/turn', async (req, res) => {
     if (!session) {
       return res.status(404).json({ message: 'Pelitilaa ei löytynyt' });
     }
+
+    // 🧑 Haetaan pelaajan hahmoluokan tilastot (aloitebonus, puolustus) kerran
+    // tässä - ennen tämä oli kovakoodattu ternaari joka toimi vain kahdelle
+    // hahmolle, nyt toimii kaikille CharacterClass-tietueen kautta.
+    const playerClass = await CharacterClass.findOne({ name: session.characterType });
+    const playerInitiativeBonus = parseInt(playerClass?.initiativeBonus) || 0;
+    const playerDefenseValue = parseInt(playerClass?.baseDefense) || 10;
 
     // 👾Haetaan se hirviö, joka on parhaillaan merkitty istuntoon!
     const monsterNameInSession = session.currentMonsterName || 'Varjohahmo';
@@ -67,7 +75,7 @@ router.post('/turn', async (req, res) => {
     if (action === 'hyokkaa') {
       if (!initiativeWinner) {
         const playerRawRoll = rollDice(1, 20);
-        const playerInitiative = playerRawRoll + (session.characterType === 'Metsästäjä' ? 4 : 0);
+        const playerInitiative = playerRawRoll + playerInitiativeBonus;
         const monsterInitiative = rollDice(1, 20);
         displayRoll = playerRawRoll; // näytetään pelaajan oma raaka d20-heitto nopassa
 
@@ -85,7 +93,7 @@ router.post('/turn', async (req, res) => {
         session.currentTurn = nextTurn;
       } else {
         let weapon = session.inventory[0];
-        const playerDefense = session.characterType === 'Metsästäjä' ? 12 : 10;
+        const playerDefense = playerDefenseValue;
         let currentPlayerHp = parseInt(session.stats.hp) || 40;
 
         if (nextTurn === 'pelaaja') {

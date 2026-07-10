@@ -28,14 +28,32 @@ export const seedCharacters = async () => {
         description: 'Tuntee metsän polut ja varjot.',
         baseHp: '40',
         startingWeapon: { name: 'Vanha puukko', maxDurability: '8' },
-        initiativeBonus: '4'
+        initiativeBonus: '4',
+        baseDefense: '12'
       },
       {
         name: 'Mekaanikko',
         description: 'Kaupunkiolento raskailla työkaluilla.',
         baseHp: '55',
         startingWeapon: { name: 'Raskas jakoavain', maxDurability: '12' },
-        initiativeBonus: '0'
+        initiativeBonus: '0',
+        baseDefense: '10'
+      },
+      {
+        name: 'Varas',
+        description: 'Nopea ja näkymätön, mutta ei kestä montaa iskua.',
+        baseHp: '32',
+        startingWeapon: { name: 'Heittoveitset', maxDurability: '6' },
+        initiativeBonus: '7',
+        baseDefense: '14'
+      },
+      {
+        name: 'Bodari',
+        description: 'Valtava voima, mutta hidas liikkeissään.',
+        baseHp: '70',
+        startingWeapon: { name: 'Käsipaino', maxDurability: '16' },
+        initiativeBonus: '-3',
+        baseDefense: '6'
       }
     ]);
 

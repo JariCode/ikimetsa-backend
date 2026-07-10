@@ -20,11 +20,14 @@ const areaSchema = new mongoose.Schema({
     weaponName: { type: String, default: null }
   },
   // ⚔️ Aseen löytötapahtuma - sama periaate kuin companionEvent, mutta aselöytö
-  // riippuu hahmoluokasta (Metsästäjä vs Mekaanikko saavat eri aseen).
+  // riippuu hahmoluokasta (jokaisella hahmolla oma aseen nimi tässä samassa
+  // tapahtumassa - damageBonus on jaettu, sama kaikille hahmoille).
   weaponEvent: {
     discoveryText: { type: String, default: null },
     hunterWeaponName: { type: String, default: null },
     mechanicWeaponName: { type: String, default: null },
+    thiefWeaponName: { type: String, default: null },
+    strongmanWeaponName: { type: String, default: null },
     damageBonus: { type: Number, default: 0 }
   },
   treasureEvent: {

@@ -193,9 +193,17 @@ router.post('/find-weapon', async (req, res) => {
       return res.status(400).json({ message: 'Tällä alueella ei ole asetapahtumaa.' });
     }
 
-    const newWeaponName = session.characterType === 'Metsästäjä'
-      ? currentArea.weaponEvent.hunterWeaponName
-      : currentArea.weaponEvent.mechanicWeaponName;
+    // 🗡️ Yleinen hahmokohtainen aseen nimi -haku. Aiemmin tämä oli
+    // kovakoodattu ternaari (Metsästäjä ? X : Y), joka olisi antanut
+    // kaikille muille hahmoille vahingossa Mekaanikon aseen. Nyt jokainen
+    // hahmo hakee oman nimensä mukaisen kentän.
+    const weaponNameByCharacter = {
+      'Metsästäjä': currentArea.weaponEvent.hunterWeaponName,
+      'Mekaanikko': currentArea.weaponEvent.mechanicWeaponName,
+      'Varas': currentArea.weaponEvent.thiefWeaponName,
+      'Bodari': currentArea.weaponEvent.strongmanWeaponName
+    };
+    const newWeaponName = weaponNameByCharacter[session.characterType];
 
     session.weaponFound = true;
     session.weaponDamageBonus = currentArea.weaponEvent.damageBonus || 0;

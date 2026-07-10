@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const gameSessionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  characterType: { type: String, enum: ['Metsästäjä', 'Mekaanikko'], required: true },
+  characterType: { type: String, enum: ['Metsästäjä', 'Mekaanikko', 'Varas', 'Bodari'], required: true },
   currentLocation: { type: String, default: 'metsan_reuna' },
   stats: {
     hp: { type: Number, required: true },
@@ -47,7 +47,7 @@ const gameSessionSchema = new mongoose.Schema({
   companionWeaponDurability: { type: Number, default: 8 },
   companionWeaponMaxDurability: { type: Number, default: 8 },
   
-  // 🔥 LISÄTTY: Kertoo onko Velho lyöty ja peli pelattu onnistuneesti läpi!
+  // 🔥Kertoo onko Velho lyöty ja peli pelattu onnistuneesti läpi!
   isGameCompleted: { type: Boolean, default: false },
 
   // 🔥 TALLENNUSPISTE (nuotio): viimeisin hetki jolloin pelaaja lepäsi hirviön kaatamisen jälkeen.
