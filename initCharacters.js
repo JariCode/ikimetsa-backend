@@ -51,7 +51,7 @@ export const seedCharacters = async () => {
         name: 'Bodari',
         description: 'Valtava voima, mutta hidas liikkeissään.',
         baseHp: '70',
-        startingWeapon: { name: 'Käsipaino', maxDurability: '16' },
+        startingWeapon: { name: 'Käsipaino', maxDurability: '10' },
         initiativeBonus: '-3',
         baseDefense: '6'
       }
