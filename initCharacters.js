@@ -27,7 +27,7 @@ export const seedCharacters = async () => {
         name: 'Metsästäjä',
         description: 'Tuntee metsän polut ja varjot.',
         baseHp: '40',
-        startingWeapon: { name: 'Vanha puukko', maxDurability: '8' },
+        startingWeapon: { name: 'Vanha puukko', maxDurability: '9' },
         initiativeBonus: '4',
         baseDefense: '12'
       },
@@ -42,8 +42,8 @@ export const seedCharacters = async () => {
       {
         name: 'Varas',
         description: 'Nopea ja näkymätön, mutta ei kestä montaa iskua.',
-        baseHp: '32',
-        startingWeapon: { name: 'Heittoveitset', maxDurability: '6' },
+        baseHp: '35',
+        startingWeapon: { name: 'Heittoveitset', maxDurability: '7' },
         initiativeBonus: '7',
         baseDefense: '14'
       },
