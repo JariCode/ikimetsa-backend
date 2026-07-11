@@ -24,13 +24,12 @@ const attachAreaIfSession = async (session) => {
 
 // HTTPOnly-evästeen suojatut asetukset
 const cookieOptions = {
-  httpOnly: true,    // Estää frontin JavaScriptiä koskemasta tokeniin (XSS-suoja)
+  httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict', // CSRF-suojaus
-  maxAge: 24 * 60 * 60 * 1000 // 1 päivä
+  sameSite: 'strict',
+  maxAge: 24 * 60 * 60 * 1000
 };
 
-// --- KÄYTTÄJÄTUNNUKSEN JA SALASANAN VALIDOINTISÄÄNNÖT ---
 const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
 const PASSWORD_MIN_LENGTH = 8;
 const FORBIDDEN_CHARS_REGEX = /[<>$;`\\|]/;
@@ -72,8 +71,6 @@ function getUserIdFromRequest(req) {
   }
 }
 
-// 🔐 Lukee sekä käyttäjän id:n että roolin tokenista. Admin-reitit käyttävät
-// tätä varmistaakseen että pyytäjä on todella admin ennen toiminnon suoritusta.
 function getAuthFromRequest(req) {
   const token = req.cookies.token;
   if (!token) return null;
@@ -85,7 +82,6 @@ function getAuthFromRequest(req) {
   }
 }
 
-// REKISTERÖITYMINEN
 router.post('/register', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -108,19 +104,10 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
-      username,
-      password: hashedPassword
-    });
-
+    const newUser = new User({ username, password: hashedPassword });
     await newUser.save();
 
-    const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
-      JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
+    const token = jwt.sign({ id: newUser._id, role: newUser.role }, JWT_SECRET, { expiresIn: '1d' });
     res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
@@ -130,17 +117,12 @@ router.post('/register', async (req, res) => {
     });
     await newLog.save();
 
-    res.status(201).json({
-      username: newUser.username,
-      gameSessionId: null,
-      session: null
-    });
+    res.status(201).json({ username: newUser.username, gameSessionId: null, session: null });
   } catch (error) {
     res.status(500).json({ message: 'Palvelinvirhe rekisteröinnissä', error: error.message });
   }
 });
 
-// KIRJAUTUMINEN
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -155,12 +137,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Väärä käyttäjänimi tai salasana' });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '1d' }
-    );
-
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
     res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
@@ -185,7 +162,6 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ISTUNNON TARKISTUS SIVUN PÄIVITYKSESSÄ
 router.get('/me', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -216,7 +192,6 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// 🔥 ULOSKIRJAUTUMINEN: Nollaa automaattisesti tietokannasta, jos peli oli suoritettu loppuun
 router.post('/logout', async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -236,11 +211,10 @@ router.post('/logout', async (req, res) => {
 
       const GameSession = (await import('../models/GameSession.js')).default;
       const session = await GameSession.findOne({ userId });
-      
-      // Jos peli on suoritettu läpi, tuhotaan pelitallennus taustalla
+
       if (session && session.isGameCompleted) {
         await GameSession.findOneAndDelete({ userId });
-        
+
         const newLog = new Log({
           action: 'GAME_RESET_ON_LOGOUT',
           details: `Pelaajan voitettu peli nollattiin automaattisesti uloskirjautumisen yhteydessä.`,
@@ -257,7 +231,6 @@ router.post('/logout', async (req, res) => {
   res.json({ message: 'Kirjauduttu ulos ja evästeet pyyhitty' });
 });
 
-// KÄYTTÄJÄTUNNUKSEN VAIHTO
 router.patch('/username', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -306,7 +279,6 @@ router.patch('/username', async (req, res) => {
   }
 });
 
-// SALASANAN VAIHTO
 router.patch('/password', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -350,7 +322,6 @@ router.patch('/password', async (req, res) => {
   }
 });
 
-// OMAN TILIN POISTO
 router.delete('/account', async (req, res) => {
   try {
     const userId = getUserIdFromRequest(req);
@@ -374,7 +345,6 @@ router.delete('/account', async (req, res) => {
       return res.status(400).json({ message: 'Väärä salasana' });
     }
 
-    // 🛡️ Estä viimeisen adminin poistuminen, jottei sovellus jää ilman ylläpitäjää.
     if (user.role === 'admin') {
       const adminCount = await User.countDocuments({ role: 'admin' });
       if (adminCount <= 1) {
@@ -403,12 +373,9 @@ router.delete('/account', async (req, res) => {
 });
 
 // ==========================================================================
-// 🔐 ADMIN-REITIT - vain ylläpitäjille. Jokainen tarkistaa roolin tokenista,
-// ja kriittiset toiminnot suojaavat adminia itseltään (ei voi alentaa/poistaa
-// itseään, jottei sovellus jää ilman ylläpitäjää).
+// 🔐 ADMIN-REITIT
 // ==========================================================================
 
-// Apuvahvistus: palauttaa admin-käyttäjän tai lähettää virheen ja palauttaa null.
 async function requireAdmin(req, res) {
   const auth = getAuthFromRequest(req);
   if (!auth || !auth.id) {
@@ -422,7 +389,6 @@ async function requireAdmin(req, res) {
   return auth;
 }
 
-// 📋 Kaikki käyttäjät (ilman salasanoja)
 router.get('/admin/users', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -435,15 +401,11 @@ router.get('/admin/users', async (req, res) => {
   }
 });
 
-// 📜 Lokit (uusimmat ensin) - vain tilihallinnan tapahtumat, ei pelitapahtumia.
-// Frontend suodattaa lisäksi käyttäjänimihaulla.
 router.get('/admin/logs', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    // Vain nämä toiminnot kiinnostavat ylläpitäjää - pelitapahtumat (GAME_START,
-    // WEAPON_FOUND, COMPANION_FOUND, PLAYER_RESPAWN ym.) jätetään pois.
     const adminRelevantActions = [
       'USER_REGISTER',
       'USER_LOGIN',
@@ -454,6 +416,7 @@ router.get('/admin/logs', async (req, res) => {
       'ADMIN_USER_DELETE',
       'ADMIN_ROLE_CHANGE',
       'ADMIN_MONSTER_UPDATE',
+      'ADMIN_AREA_UPDATE'
     ];
 
     const logs = await Log.find({ action: { $in: adminRelevantActions } })
@@ -465,7 +428,6 @@ router.get('/admin/logs', async (req, res) => {
   }
 });
 
-// 🔄 Vaihda käyttäjän rooli (user <-> admin). Admin ei voi alentaa itseään.
 router.patch('/admin/user/:id/role', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -478,7 +440,6 @@ router.patch('/admin/user/:id/role', async (req, res) => {
       return res.status(400).json({ message: 'Virheellinen rooli.' });
     }
 
-    // 🛡️ Admin ei voi alentaa itseään, jottei jää vahingossa ilman oikeuksia.
     if (targetId === admin.id && role !== 'admin') {
       return res.status(403).json({ message: 'Et voi poistaa omaa ylläpitäjän rooliasi.' });
     }
@@ -488,8 +449,6 @@ router.patch('/admin/user/:id/role', async (req, res) => {
       return res.status(404).json({ message: 'Käyttäjää ei löytynyt' });
     }
 
-    // 🛡️ Jos ollaan alentamassa viimeistä adminia, estä (varmistus senkin varalta
-    // että kohteena on eri admin kuin pyytäjä).
     if (target.role === 'admin' && role !== 'admin') {
       const adminCount = await User.countDocuments({ role: 'admin' });
       if (adminCount <= 1) {
@@ -515,7 +474,6 @@ router.patch('/admin/user/:id/role', async (req, res) => {
   }
 });
 
-// 🗑️ Poista käyttäjä (ja hänen pelitietonsa). Admin ei voi poistaa itseään.
 router.delete('/admin/user/:id', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -523,7 +481,6 @@ router.delete('/admin/user/:id', async (req, res) => {
 
     const targetId = req.params.id;
 
-    // 🛡️ Admin ei voi poistaa itseään admin-paneelin kautta.
     if (targetId === admin.id) {
       return res.status(403).json({ message: 'Et voi poistaa itseäsi ylläpitopaneelista.' });
     }
@@ -554,11 +511,9 @@ router.delete('/admin/user/:id', async (req, res) => {
 });
 
 // ==========================================================================
-// 🐺 HIRVIÖIDEN HALLINTA (admin) - sama requireAdmin-suojaus ja lokikaava
-// kuin käyttäjienhallinnassa yllä.
+// 🐺 HIRVIÖIDEN HALLINTA
 // ==========================================================================
 
-// 📋 Kaikki hirviöt
 router.get('/admin/monsters', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -571,7 +526,6 @@ router.get('/admin/monsters', async (req, res) => {
   }
 });
 
-// ✏️ Hirviön muokkaus
 router.patch('/admin/monster/:id', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
@@ -606,6 +560,94 @@ router.patch('/admin/monster/:id', async (req, res) => {
     res.json({ monster });
   } catch (error) {
     res.status(500).json({ message: 'Hirviön muokkaus epäonnistui', error: error.message });
+  }
+});
+
+// ==========================================================================
+// 🗺️ ALUEIDEN HALLINTA
+// ==========================================================================
+
+router.get('/admin/areas', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const areas = await Area.find({}).sort({ order: 1 });
+    res.json({ areas });
+  } catch (error) {
+    res.status(500).json({ message: 'Alueiden haku epäonnistui', error: error.message });
+  }
+});
+
+router.patch('/admin/area/:id', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const area = await Area.findById(req.params.id);
+    if (!area) {
+      return res.status(404).json({ message: 'Aluetta ei löytynyt' });
+    }
+
+    const {
+      name, locationLabel, monsterName, encounterText, backgroundClass, mechanic,
+      companionEvent, weaponEvent, treasureEvent, goodRollTexts, badRollTexts
+    } = req.body;
+
+    if (name !== undefined) area.name = name;
+    if (locationLabel !== undefined) area.locationLabel = locationLabel;
+    if (monsterName !== undefined) area.monsterName = monsterName;
+    if (encounterText !== undefined) area.encounterText = encounterText;
+    if (backgroundClass !== undefined) area.backgroundClass = backgroundClass;
+    if (mechanic !== undefined) area.mechanic = mechanic;
+
+    if (companionEvent !== undefined) {
+      area.companionEvent = {
+        name: companionEvent.name ?? area.companionEvent?.name ?? null,
+        discoveryText: companionEvent.discoveryText ?? area.companionEvent?.discoveryText ?? null,
+        weaponName: companionEvent.weaponName ?? area.companionEvent?.weaponName ?? null
+      };
+    }
+
+    if (weaponEvent !== undefined) {
+      area.weaponEvent = {
+        discoveryText: weaponEvent.discoveryText ?? area.weaponEvent?.discoveryText ?? null,
+        hunterWeaponName: weaponEvent.hunterWeaponName ?? area.weaponEvent?.hunterWeaponName ?? null,
+        mechanicWeaponName: weaponEvent.mechanicWeaponName ?? area.weaponEvent?.mechanicWeaponName ?? null,
+        thiefWeaponName: weaponEvent.thiefWeaponName ?? area.weaponEvent?.thiefWeaponName ?? null,
+        strongmanWeaponName: weaponEvent.strongmanWeaponName ?? area.weaponEvent?.strongmanWeaponName ?? null,
+        damageBonus: weaponEvent.damageBonus !== undefined ? Number(weaponEvent.damageBonus) : (area.weaponEvent?.damageBonus ?? 0)
+      };
+    }
+
+    if (treasureEvent !== undefined) {
+      area.treasureEvent = {
+        discoveryText: treasureEvent.discoveryText ?? area.treasureEvent?.discoveryText ?? null,
+        repairPointsBonus: treasureEvent.repairPointsBonus !== undefined ? Number(treasureEvent.repairPointsBonus) : (area.treasureEvent?.repairPointsBonus ?? 0),
+        maxHpBonus: treasureEvent.maxHpBonus !== undefined ? Number(treasureEvent.maxHpBonus) : (area.treasureEvent?.maxHpBonus ?? 0)
+      };
+    }
+
+    if (Array.isArray(goodRollTexts)) {
+      area.goodRollTexts = goodRollTexts.map(t => t.trim()).filter(Boolean);
+    }
+    if (Array.isArray(badRollTexts)) {
+      area.badRollTexts = badRollTexts.map(t => t.trim()).filter(Boolean);
+    }
+
+    await area.save();
+
+    const adminUser = await User.findById(admin.id);
+    const newLog = new Log({
+      action: 'ADMIN_AREA_UPDATE',
+      details: `Ylläpitäjä muokkasi aluetta "${area.name}" (alue ${area.order})`,
+      performedBy: adminUser ? adminUser.username : 'Tuntematon ylläpitäjä'
+    });
+    await newLog.save();
+
+    res.json({ area });
+  } catch (error) {
+    res.status(500).json({ message: 'Alueen muokkaus epäonnistui', error: error.message });
   }
 });
 
