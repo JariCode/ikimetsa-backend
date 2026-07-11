@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import Log from '../models/Log.js';
 import Area from '../models/Area.js';
 import Monster from '../models/Monster.js';
+import CharacterClass from '../models/CharacterClass.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -13,7 +14,6 @@ if (!JWT_SECRET) {
 }
 const TOTAL_AREAS = 10;
 
-// 🗺️ Alue-liitäntähelpperi
 const attachAreaIfSession = async (session) => {
   if (!session) return null;
   const areaOrder = Math.min(parseInt(session.currentAreaIndex) || 1, TOTAL_AREAS);
@@ -22,7 +22,6 @@ const attachAreaIfSession = async (session) => {
   return { ...sessionObject, currentArea: area || null };
 };
 
-// HTTPOnly-evästeen suojatut asetukset
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -372,10 +371,6 @@ router.delete('/account', async (req, res) => {
   }
 });
 
-// ==========================================================================
-// 🔐 ADMIN-REITIT
-// ==========================================================================
-
 async function requireAdmin(req, res) {
   const auth = getAuthFromRequest(req);
   if (!auth || !auth.id) {
@@ -416,7 +411,7 @@ router.get('/admin/logs', async (req, res) => {
       'ADMIN_USER_DELETE',
       'ADMIN_ROLE_CHANGE',
       'ADMIN_MONSTER_UPDATE',
-      'ADMIN_AREA_UPDATE'
+      'ADMIN_CHARACTER_UPDATE'
     ];
 
     const logs = await Log.find({ action: { $in: adminRelevantActions } })
@@ -510,16 +505,13 @@ router.delete('/admin/user/:id', async (req, res) => {
   }
 });
 
-// ==========================================================================
-// 🐺 HIRVIÖIDEN HALLINTA
-// ==========================================================================
-
 router.get('/admin/monsters', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const monsters = await Monster.find({}).sort({ name: 1 });
+    const monsters = await Monster.find({});
+    monsters.sort((a, b) => (parseInt(a.level) || 0) - (parseInt(b.level) || 0));
     res.json({ monsters });
   } catch (error) {
     res.status(500).json({ message: 'Hirviöiden haku epäonnistui', error: error.message });
@@ -536,15 +528,13 @@ router.patch('/admin/monster/:id', async (req, res) => {
       return res.status(404).json({ message: 'Hirviötä ei löytynyt' });
     }
 
-    const { name, hp, defense, attackBonus, damageMax, xpReward, cssClass, level } = req.body;
+    const { hp, defense, attackBonus, damageMax, xpReward, level } = req.body;
 
-    if (name !== undefined) monster.name = name;
     if (hp !== undefined) monster.hp = String(hp);
     if (defense !== undefined) monster.defense = String(defense);
     if (attackBonus !== undefined) monster.attackBonus = String(attackBonus);
     if (damageMax !== undefined) monster.damageMax = String(damageMax);
     if (xpReward !== undefined) monster.xpReward = String(xpReward);
-    if (cssClass !== undefined) monster.cssClass = cssClass;
     if (level !== undefined) monster.level = String(level);
 
     await monster.save();
@@ -563,91 +553,50 @@ router.patch('/admin/monster/:id', async (req, res) => {
   }
 });
 
-// ==========================================================================
-// 🗺️ ALUEIDEN HALLINTA
-// ==========================================================================
-
-router.get('/admin/areas', async (req, res) => {
+router.get('/admin/characters', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const areas = await Area.find({}).sort({ order: 1 });
-    res.json({ areas });
+    const characters = await CharacterClass.find({});
+    characters.sort((a, b) => (parseInt(a.baseHp) || 0) - (parseInt(b.baseHp) || 0));
+    res.json({ characters });
   } catch (error) {
-    res.status(500).json({ message: 'Alueiden haku epäonnistui', error: error.message });
+    res.status(500).json({ message: 'Hahmoluokkien haku epäonnistui', error: error.message });
   }
 });
 
-router.patch('/admin/area/:id', async (req, res) => {
+router.patch('/admin/character/:id', async (req, res) => {
   try {
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
-    const area = await Area.findById(req.params.id);
-    if (!area) {
-      return res.status(404).json({ message: 'Aluetta ei löytynyt' });
+    const character = await CharacterClass.findById(req.params.id);
+    if (!character) {
+      return res.status(404).json({ message: 'Hahmoluokkaa ei löytynyt' });
     }
 
-    const {
-      name, locationLabel, monsterName, encounterText, backgroundClass, mechanic,
-      companionEvent, weaponEvent, treasureEvent, goodRollTexts, badRollTexts
-    } = req.body;
+    const { baseHp, startingWeaponMaxDurability, initiativeBonus, baseDefense } = req.body;
 
-    if (name !== undefined) area.name = name;
-    if (locationLabel !== undefined) area.locationLabel = locationLabel;
-    if (monsterName !== undefined) area.monsterName = monsterName;
-    if (encounterText !== undefined) area.encounterText = encounterText;
-    if (backgroundClass !== undefined) area.backgroundClass = backgroundClass;
-    if (mechanic !== undefined) area.mechanic = mechanic;
+    if (baseHp !== undefined) character.baseHp = String(baseHp);
+    if (initiativeBonus !== undefined) character.initiativeBonus = String(initiativeBonus);
+    if (baseDefense !== undefined) character.baseDefense = String(baseDefense);
 
-    if (companionEvent !== undefined) {
-      area.companionEvent = {
-        name: companionEvent.name ?? area.companionEvent?.name ?? null,
-        discoveryText: companionEvent.discoveryText ?? area.companionEvent?.discoveryText ?? null,
-        weaponName: companionEvent.weaponName ?? area.companionEvent?.weaponName ?? null
-      };
-    }
+    if (startingWeaponMaxDurability !== undefined) character.startingWeapon.maxDurability = String(startingWeaponMaxDurability);
 
-    if (weaponEvent !== undefined) {
-      area.weaponEvent = {
-        discoveryText: weaponEvent.discoveryText ?? area.weaponEvent?.discoveryText ?? null,
-        hunterWeaponName: weaponEvent.hunterWeaponName ?? area.weaponEvent?.hunterWeaponName ?? null,
-        mechanicWeaponName: weaponEvent.mechanicWeaponName ?? area.weaponEvent?.mechanicWeaponName ?? null,
-        thiefWeaponName: weaponEvent.thiefWeaponName ?? area.weaponEvent?.thiefWeaponName ?? null,
-        strongmanWeaponName: weaponEvent.strongmanWeaponName ?? area.weaponEvent?.strongmanWeaponName ?? null,
-        damageBonus: weaponEvent.damageBonus !== undefined ? Number(weaponEvent.damageBonus) : (area.weaponEvent?.damageBonus ?? 0)
-      };
-    }
-
-    if (treasureEvent !== undefined) {
-      area.treasureEvent = {
-        discoveryText: treasureEvent.discoveryText ?? area.treasureEvent?.discoveryText ?? null,
-        repairPointsBonus: treasureEvent.repairPointsBonus !== undefined ? Number(treasureEvent.repairPointsBonus) : (area.treasureEvent?.repairPointsBonus ?? 0),
-        maxHpBonus: treasureEvent.maxHpBonus !== undefined ? Number(treasureEvent.maxHpBonus) : (area.treasureEvent?.maxHpBonus ?? 0)
-      };
-    }
-
-    if (Array.isArray(goodRollTexts)) {
-      area.goodRollTexts = goodRollTexts.map(t => t.trim()).filter(Boolean);
-    }
-    if (Array.isArray(badRollTexts)) {
-      area.badRollTexts = badRollTexts.map(t => t.trim()).filter(Boolean);
-    }
-
-    await area.save();
+    await character.save();
 
     const adminUser = await User.findById(admin.id);
     const newLog = new Log({
-      action: 'ADMIN_AREA_UPDATE',
-      details: `Ylläpitäjä muokkasi aluetta "${area.name}" (alue ${area.order})`,
+      action: 'ADMIN_CHARACTER_UPDATE',
+      details: `Ylläpitäjä muokkasi hahmoluokkaa "${character.name}"`,
       performedBy: adminUser ? adminUser.username : 'Tuntematon ylläpitäjä'
     });
     await newLog.save();
 
-    res.json({ area });
+    res.json({ character });
   } catch (error) {
-    res.status(500).json({ message: 'Alueen muokkaus epäonnistui', error: error.message });
+    res.status(500).json({ message: 'Hahmoluokan muokkaus epäonnistui', error: error.message });
   }
 });
 
