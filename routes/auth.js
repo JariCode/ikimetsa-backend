@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Log from '../models/Log.js';
 import Area from '../models/Area.js';
+import Monster from '../models/Monster.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -451,7 +452,8 @@ router.get('/admin/logs', async (req, res) => {
       'USER_PASSWORD_CHANGE',
       'USER_ACCOUNT_DELETE',
       'ADMIN_USER_DELETE',
-      'ADMIN_ROLE_CHANGE'
+      'ADMIN_ROLE_CHANGE',
+      'ADMIN_MONSTER_UPDATE',
     ];
 
     const logs = await Log.find({ action: { $in: adminRelevantActions } })
@@ -548,6 +550,62 @@ router.delete('/admin/user/:id', async (req, res) => {
     res.json({ message: 'Käyttäjä poistettu', username: deletedUsername });
   } catch (error) {
     res.status(500).json({ message: 'Käyttäjän poisto epäonnistui', error: error.message });
+  }
+});
+
+// ==========================================================================
+// 🐺 HIRVIÖIDEN HALLINTA (admin) - sama requireAdmin-suojaus ja lokikaava
+// kuin käyttäjienhallinnassa yllä.
+// ==========================================================================
+
+// 📋 Kaikki hirviöt
+router.get('/admin/monsters', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const monsters = await Monster.find({}).sort({ name: 1 });
+    res.json({ monsters });
+  } catch (error) {
+    res.status(500).json({ message: 'Hirviöiden haku epäonnistui', error: error.message });
+  }
+});
+
+// ✏️ Hirviön muokkaus
+router.patch('/admin/monster/:id', async (req, res) => {
+  try {
+    const admin = await requireAdmin(req, res);
+    if (!admin) return;
+
+    const monster = await Monster.findById(req.params.id);
+    if (!monster) {
+      return res.status(404).json({ message: 'Hirviötä ei löytynyt' });
+    }
+
+    const { name, hp, defense, attackBonus, damageMax, xpReward, cssClass, level } = req.body;
+
+    if (name !== undefined) monster.name = name;
+    if (hp !== undefined) monster.hp = String(hp);
+    if (defense !== undefined) monster.defense = String(defense);
+    if (attackBonus !== undefined) monster.attackBonus = String(attackBonus);
+    if (damageMax !== undefined) monster.damageMax = String(damageMax);
+    if (xpReward !== undefined) monster.xpReward = String(xpReward);
+    if (cssClass !== undefined) monster.cssClass = cssClass;
+    if (level !== undefined) monster.level = String(level);
+
+    await monster.save();
+
+    const adminUser = await User.findById(admin.id);
+    const newLog = new Log({
+      action: 'ADMIN_MONSTER_UPDATE',
+      details: `Ylläpitäjä muokkasi hirviötä "${monster.name}"`,
+      performedBy: adminUser ? adminUser.username : 'Tuntematon ylläpitäjä'
+    });
+    await newLog.save();
+
+    res.json({ monster });
+  } catch (error) {
+    res.status(500).json({ message: 'Hirviön muokkaus epäonnistui', error: error.message });
   }
 });
 
