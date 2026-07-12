@@ -36,6 +36,7 @@ const attachAreaToSession = async (session) => {
 router.get('/classes', async (req, res) => {
   try {
     const classes = await CharacterClass.find();
+    classes.sort((a, b) => (parseInt(a.baseHp) || 0) - (parseInt(b.baseHp) || 0)); // Järjestetään hahmoluokat HP:n mukaan, pienimmästä suurimpaan
     res.json(classes);
   } catch (error) {
     res.status(500).json({ message: 'Hahmoluokkien haku epäonnistui' });
