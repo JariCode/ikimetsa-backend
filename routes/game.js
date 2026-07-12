@@ -432,7 +432,7 @@ router.post('/respawn', async (req, res) => {
     }
     const freshMonsterHp = parseInt(dbMonster.hp) || 25;
 
-    const checkpoint = session.checkpoint || { xp: 0, level: 1, maxHp: session.stats.maxHp || 40, repairPoints: 5 };
+    const checkpoint = session.checkpoint || { xp: 0, level: 1, maxHp: session.stats.maxHp || 40, repairPoints: 6 };
 
     session.stats.xp = checkpoint.xp;
     session.stats.level = checkpoint.level;
@@ -442,8 +442,8 @@ router.post('/respawn', async (req, res) => {
     if (session.inventory[0]) {
       session.inventory[0].durability = session.inventory[0].maxDurability;
     }
-    // 🔥 Haetaan pisteet tallennuspisteestä, mutta varmistetaan vähintään 5 pisteen armopala suojaksi!
-    session.repairPoints = Math.max(5, checkpoint.repairPoints !== undefined ? checkpoint.repairPoints : 5);
+    // 🔥 Haetaan pisteet tallennuspisteestä, mutta varmistetaan vähintään 6 pisteen armopala suojaksi!
+    session.repairPoints = Math.max(6, checkpoint.repairPoints !== undefined ? checkpoint.repairPoints : 6);
 
     session.currentMonsterHp = freshMonsterHp;
     session.currentMonsterCssClass = dbMonster.cssClass || 'varjohahmo';
