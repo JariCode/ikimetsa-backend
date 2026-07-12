@@ -92,11 +92,11 @@ router.post('/start-game', async (req, res) => {
       currentMonsterCssClass: dbMonster.cssClass || 'varjohahmo',
       combatInitiative: null,
       currentTurn: null,
-      repairPoints: 5,
+      repairPoints: 6,
       hasEnteredCombat: false,
       currentAreaIndex: 1,
       isGameCompleted: false,
-      checkpoint: { xp: 0, level: 1, maxHp: hpValue, repairPoints: 5 } // 🔥 Päivitetty muistamaan aloituspisteet
+      checkpoint: { xp: 0, level: 1, maxHp: hpValue, repairPoints: 6 } // 🔥 Päivitetty muistamaan aloituspisteet
     });
 
     await newSession.save();
