@@ -98,7 +98,7 @@ router.post('/turn', async (req, res) => {
 
         if (nextTurn === 'pelaaja') {
           if (weapon && weapon.durability <= 0) {
-            combatLogEntries.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi hyökätä tehokkaasti.`);
+            combatLogEntries.push(`⚠️ Aseesi (${weapon.name}) on rikki! Et voi tehdä vahinkoa hyökkäyksilläsi.`);
           } else {
             // 🎯 Tasosta kasvava hyökkäysbonus
             const playerLevel = parseInt(session.stats.level) || 1;
@@ -129,7 +129,7 @@ router.post('/turn', async (req, res) => {
           // 🧑‍🤝‍🦯 Kumppani iskee samalla jos aktiivinen - oma erillinen heitto, vahinko ja ase
           if (session.companionActive && monster.hp > 0) {
             if ((session.companionWeaponDurability || 0) <= 0) {
-              combatLogEntries.push(`⚠️ ${session.companionName}:n ase (${session.companionWeaponName}) on rikki! Hän ei voi hyökätä tehokkaasti.`);
+              combatLogEntries.push(`⚠️ ${session.companionName}:n ase (${session.companionWeaponName}) on rikki! Hän ei voi tehdä vahinkoa hyökkäyksillään.`);
             } else {
               // 🎯 Kumppanin osumabonus skaalautuu pelaajan tason mukana, mutta jää
               // johdonmukaisesti 2 tasoa jälkeen (kumppani on hieman heikompi kuin pelaaja).
