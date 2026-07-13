@@ -442,8 +442,8 @@ router.post('/respawn', async (req, res) => {
     if (session.inventory[0]) {
       session.inventory[0].durability = session.inventory[0].maxDurability;
     }
-    // 🔥 Haetaan pisteet tallennuspisteestä, mutta varmistetaan vähintään 6 pisteen armopala suojaksi!
-    session.repairPoints = Math.max(6, checkpoint.repairPoints !== undefined ? checkpoint.repairPoints : 6);
+    // 🔥 Haetaan pisteet kuolinhetkeltä, mutta varmistetaan vähintään 6 pisteen armopala suojaksi!
+    session.repairPoints = Math.max(6, parseInt(session.repairPoints) || 0);
 
     session.currentMonsterHp = freshMonsterHp;
     session.currentMonsterCssClass = dbMonster.cssClass || 'varjohahmo';
