@@ -7,4 +7,6 @@ const logSchema = new mongoose.Schema({
   ipAddress: { type: String }
 }, { timestamps: true });
 
+logSchema.index({ createdAt: 1 }, { expireAfterSeconds: 31536000 });//Yli vuoden vanhat logit poistetaan automaattisesti
+
 export default mongoose.model('Log', logSchema);

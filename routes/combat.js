@@ -82,11 +82,11 @@ router.post('/turn', async (req, res) => {
         if (playerInitiative >= monsterInitiative) {
           initiativeWinner = 'pelaaja';
           nextTurn = 'pelaaja';
-          combatLogEntries.push(`🎲 Aloiteheitto: Olet nopeampi (Sinä: ${playerInitiative} vs ${monster.name}: ${monsterInitiative}) ja aloitat taistelun!`);
+          combatLogEntries.push(`🎲 Aloiteheitto: Heitit d20: [${playerRawRoll}] (+${playerInitiativeBonus} nopeudesta) = ${playerInitiative} vs ${monster.name}: ${monsterInitiative} - Olet nopeampi ja aloitat taistelun!`);
         } else {
           initiativeWinner = 'hirviö';
           nextTurn = 'hirviö';
-          combatLogEntries.push(`🎲 Aloiteheitto: ${monster.name} on nopeampi (${monster.name}: ${monsterInitiative} vs Sinä: ${playerInitiative}) ja syöksyy pimeydestä ensin!`);
+          combatLogEntries.push(`🎲 Aloiteheitto: Heitit d20: [${playerRawRoll}] (+${playerInitiativeBonus} nopeudesta) = ${playerInitiative} vs ${monster.name}: ${monsterInitiative} - ${monster.name} on nopeampi ja syöksyy pimeydestä ensin!`);
         }
 
         session.combatInitiative = initiativeWinner;
