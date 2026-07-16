@@ -32,6 +32,10 @@ const cookieOptions = {
 const USERNAME_REGEX = /^[a-zA-ZäöåÄÖÅ0-9_-]{3,30}$/;
 const PASSWORD_MIN_LENGTH = 8;
 const FORBIDDEN_CHARS_REGEX = /[<>$;`\\|]/;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
+if (!JWT_EXPIRES_IN) {
+  throw new Error('❌ JWT_EXPIRES_IN puuttuu .env-tiedostosta.');
+}
 
 function validateUsername(username) {
   if (typeof username !== 'string' || username.trim().length === 0) {
@@ -106,7 +110,7 @@ router.post('/register', async (req, res) => {
     const newUser = new User({ username, password: hashedPassword });
     await newUser.save();
 
-    const token = jwt.sign({ id: newUser._id, role: newUser.role }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: newUser._id, role: newUser.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
@@ -136,7 +140,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Väärä käyttäjänimi tai salasana' });
     }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.cookie('token', token, cookieOptions);
 
     const newLog = new Log({
