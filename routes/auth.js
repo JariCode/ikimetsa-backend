@@ -29,7 +29,7 @@ const cookieOptions = {
   maxAge: 24 * 60 * 60 * 1000
 };
 
-const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,30}$/;
+const USERNAME_REGEX = /^[a-zA-ZäöåÄÖÅ0-9_-]{3,30}$/;
 const PASSWORD_MIN_LENGTH = 8;
 const FORBIDDEN_CHARS_REGEX = /[<>$;`\\|]/;
 
