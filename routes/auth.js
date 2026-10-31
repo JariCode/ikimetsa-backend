@@ -383,10 +383,13 @@ async function requireAdmin(req, res) {
     res.status(401).json({ message: 'Ei oikeuksia' });
     return null;
   }
-  if (auth.role !== 'admin') {
+
+  const user = await User.findById(auth.id).select('role');
+  if (!user || user.role !== 'admin') {
     res.status(403).json({ message: 'Vain ylläpitäjillä on pääsy tähän.' });
     return null;
   }
+
   return auth;
 }
 
