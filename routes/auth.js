@@ -132,6 +132,9 @@ router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
+    const usernameError = validateUsername(username);
+    if (usernameError) return res.status(400).json({ message: usernameError });
+
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ message: 'Väärä käyttäjänimi tai salasana' });

@@ -46,6 +46,9 @@ router.get('/classes', async (req, res) => {
 router.post('/start-game', async (req, res) => {
   try {
     const { characterClassName } = req.body;
+    if (typeof characterClassName !== 'string') {
+      return res.status(400).json({ message: 'Hahmoluokka vaaditaan' });
+    }
     
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ message: 'Ei oikeuksia' });
