@@ -11,6 +11,12 @@ import combatRoutes from './routes/combat.js';
 
 import sanitizeRequest from './middleware/sanitize.js';
 import { generalLimiter, authLimiter } from './middleware/rateLimiters.js';
+import {
+  createCsrfToken,
+  csrfCookieOptions,
+  csrfProtection,
+  CSRF_COOKIE_NAME
+} from './middleware/csrf.js';
 
 // 🛡️ Kaikki ympäristömuuttujat vaaditaan eksplisiittisesti .env-tiedostosta -
 // ei kovakoodattuja oletusarvoja jotka voisivat piilottaa puuttuvan asetuksen.
@@ -43,7 +49,8 @@ app.use(helmet());
 // 🌐 CORS - vain oma frontend sallitaan, ja evästeet kulkevat mukana.
 app.use(cors({
   origin: FRONTEND_URL,
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'X-CSRF-Token']
 }));
 
 // 📦 JSON-body sallitaan, mutta kokoraja estää valtavat payloadit (DoS-suoja).
@@ -59,6 +66,14 @@ app.use('/api/', generalLimiter);
 // 🚦 Tiukempi rajoitin kirjautumiseen ja rekisteröintiin (brute force -suoja).
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+
+app.use(csrfProtection);
+
+app.get('/api/csrf-token', (req, res) => {
+  const token = createCsrfToken();
+  res.cookie(CSRF_COOKIE_NAME, token, csrfCookieOptions);
+  res.json({ token });
+});
 
 // Tietokantayhteys
 mongoose.connect(MONGODB_URI)
